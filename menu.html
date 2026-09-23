@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Menu — Lally's Cakes &amp; Sweets</title>
+  <meta name="description" content="Custom cakes, cupcakes, cookies, and party trays from Lally's Cakes &amp; Sweets. Over 100 flavors — ask for a quote." />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Nunito:wght@400;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="logo" href="index.html">
+        <img class="logo-img" src="logo.png" width="52" height="52" alt="Lally's Cakes &amp; Sweets logo" />
+        <span class="logo-text">
+          <span class="logo-script">Lally’s</span>
+          <span class="logo-sub">Cakes &amp; Sweets</span>
+        </span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="site-nav">☰</button>
+      <ul class="nav-links" id="site-nav">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="menu.html" aria-current="page">Menu</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a class="btn-nav" href="contact.html">Order / Inquire</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="page-hero">
+      <div class="wrap">
+        <span class="eyebrow">What we bake · 100+ flavors</span>
+        <h1>Menu</h1>
+        <p>Custom cakes, cupcakes, cookies, and party trays. We keep pricing approachable ($$) — final quotes depend on size, design, and flavor. Call or message us to order.</p>
+      </div>
+    </div>
+
+    <section class="section-tight">
+      <div class="wrap">
+        <div class="menu-tabs" role="tablist" aria-label="Menu categories">
+          <button type="button" class="menu-tab" role="tab" aria-selected="true" data-panel="panel-cakes" id="tab-cakes">Cakes &amp; cupcakes</button>
+          <button type="button" class="menu-tab" role="tab" aria-selected="false" data-panel="panel-sweets" id="tab-sweets">Cookies &amp; trays</button>
+          <button type="button" class="menu-tab" role="tab" aria-selected="false" data-panel="panel-flavors" id="tab-flavors">Flavors</button>
+        </div>
+
+        <div class="menu-panel is-active" role="tabpanel" id="panel-cakes" aria-labelledby="tab-cakes">
+          <ul class="menu-list">
+            <li class="menu-item">
+              <h3>Custom celebration cakes</h3>
+              <span class="price">ask for quote</span>
+              <p>Birthday, shower, graduation, and milestone cakes — flavored and decorated for your event. Elegant finishes welcome.</p>
+            </li>
+            <li class="menu-item">
+              <h3>Cupcake dozens</h3>
+              <span class="price">ask for quote</span>
+              <p>Perfect for parties and offices. Choose from our extensive flavor list with beautiful buttercream swirls.</p>
+            </li>
+            <li class="menu-item">
+              <h3>Mini cupcake trays</h3>
+              <span class="price">ask for quote</span>
+              <p>Bite-size treats for dessert tables where guests want a little of everything.</p>
+            </li>
+            <li class="menu-item">
+              <h3>Party dessert specialties</h3>
+              <span class="price">custom</span>
+              <p>Tell us your guest count and theme — we’ll help design a cake-and-sweets mix that fits.</p>
+            </li>
+          </ul>
+        </div>
+
+        <div class="menu-panel" role="tabpanel" id="panel-sweets" aria-labelledby="tab-sweets" hidden>
+          <ul class="menu-list">
+            <li class="menu-item">
+              <h3>Assorted cookie boxes</h3>
+              <span class="price">ask for quote</span>
+              <p>Shareable assortments for gifting, showers, and holiday tables.</p>
+            </li>
+            <li class="menu-item">
+              <h3>Cookie &amp; brownie platters</h3>
+              <span class="price">ask for quote</span>
+              <p>Generous trays for bigger groups — ask about themed shapes for holidays.</p>
+            </li>
+            <li class="menu-item">
+              <h3>Party sweet trays</h3>
+              <span class="price">ask for quote</span>
+              <p>Mixed sweets for brunches, offices, and celebrations. Contents vary by season and request.</p>
+            </li>
+            <li class="menu-item">
+              <h3>Seasonal specials</h3>
+              <span class="price">seasonal</span>
+              <p>Holiday boxes and limited flavors announced on Facebook throughout the year.</p>
+            </li>
+          </ul>
+        </div>
+
+        <div class="menu-panel" role="tabpanel" id="panel-flavors" aria-labelledby="tab-flavors" hidden>
+          <ul class="menu-list">
+            <li class="menu-item">
+              <h3>Over 100 flavors</h3>
+              <span class="price">ask us!</span>
+              <p>From classics to creative combinations — we can usually find (or invent) a flavor your guests will remember.</p>
+            </li>
+            <li class="menu-item">
+              <h3>Fillings &amp; frostings</h3>
+              <span class="price">custom</span>
+              <p>Pair cake flavors with fillings and buttercream finishes. We’ll guide you when you inquire.</p>
+            </li>
+            <li class="menu-item">
+              <h3>Dietary notes</h3>
+              <span class="price">inquire</span>
+              <p>Have an allergy or preference? Mention it when you call or message — we’ll tell you what we can do.</p>
+            </li>
+          </ul>
+        </div>
+
+        <p class="menu-note">
+          <strong>Pricing:</strong> We keep sweets affordable ($$ vibe) so everyone can enjoy them. We don’t list fixed menu prices here — call <a href="tel:+14842190445">(484) 219-0445</a> or <a href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">message us on Facebook</a> for a quote based on your order.
+        </p>
+
+        <div class="btn-row">
+          <a class="btn btn-primary" href="contact.html">Request a quote</a>
+          <a class="btn btn-facebook" href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">Facebook</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="logo">
+          <img class="logo-img" src="logo.png" width="44" height="44" alt="" />
+          <span class="logo-text">
+            <span class="logo-script">Lally’s</span>
+            <span class="logo-sub">Cakes &amp; Sweets</span>
+          </span>
+        </div>
+        <p>Delightful and elegant desserts since 2012. Shillington Farmers Market · over 100 flavors.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="menu.html">Menu</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">Facebook</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="tel:+14842190445">(484) 219-0445</a></li>
+          <li>10 S Summit Ave (Shillington Farmers Market), Shillington, PA 19607</li>
+          <li>Summer hours (from Facebook): Thu 10 AM – 4 PM</li>
+          <li>Other days by appointment · check Facebook</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 Lally's Cakes &amp; Sweets · EST. 2012</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

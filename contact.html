@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact — Lally's Cakes &amp; Sweets</title>
+  <meta name="description" content="Contact Lally's Cakes &amp; Sweets at Shillington Farmers Market. Call (484) 219-0445 or message on Facebook. Summer Thursday hours 10 AM – 4 PM." />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Nunito:wght@400;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="logo" href="index.html">
+        <img class="logo-img" src="logo.png" width="52" height="52" alt="Lally's Cakes &amp; Sweets logo" />
+        <span class="logo-text">
+          <span class="logo-script">Lally’s</span>
+          <span class="logo-sub">Cakes &amp; Sweets</span>
+        </span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="site-nav">☰</button>
+      <ul class="nav-links" id="site-nav">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="menu.html">Menu</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a class="btn-nav" href="contact.html" aria-current="page">Order / Inquire</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="page-hero">
+      <div class="wrap">
+        <span class="eyebrow">Say hello</span>
+        <h1>Order / Inquire</h1>
+        <p>Prefer a quick reply? <strong>Call or Facebook Message</strong> are the best ways to reach us. Use the form below to draft your details, then send via phone or Facebook.</p>
+      </div>
+    </div>
+
+    <section class="section">
+      <div class="wrap contact-layout">
+        <div class="form-card">
+          <div class="contact-ctas">
+            <a class="btn btn-primary" href="tel:+14842190445">Call (484) 219-0445</a>
+            <a class="btn btn-facebook" href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">Message on Facebook</a>
+          </div>
+
+          <div id="form-success" class="form-success" role="status" aria-live="polite"></div>
+          <p class="form-hint">No public email listed — please use phone or Facebook as your primary contact. Draft your inquiry here, then copy it into a Facebook Message or have it ready when you call.</p>
+          <form id="inquire-form" action="#" method="get" novalidate>
+            <div class="form-group">
+              <label for="name">Name</label>
+              <input type="text" id="name" name="name" autocomplete="name" required placeholder="Your name" />
+            </div>
+            <div class="form-group">
+              <label for="email">Email <span style="font-weight:400;color:var(--muted);">(optional — for your notes)</span></label>
+              <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" />
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone</label>
+              <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="(484) 000-0000" />
+            </div>
+            <div class="form-group">
+              <label for="event-date">Event date</label>
+              <input type="date" id="event-date" name="event-date" />
+            </div>
+            <div class="form-group">
+              <label for="message">Message</label>
+              <textarea id="message" name="message" required placeholder="Tell us about the cake or sweets you’d like, guest count, flavors, and any must-haves…"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Copy inquiry &amp; open Facebook</button>
+          </form>
+        </div>
+
+        <aside class="info-card">
+          <h3>Visit &amp; reach us</h3>
+          <ul class="info-list">
+            <li>
+              <strong>Phone</strong>
+              <a href="tel:+14842190445">(484) 219-0445</a>
+            </li>
+            <li>
+              <strong>Facebook</strong>
+              <a href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">facebook.com/LallysCakesandSweets</a>
+            </li>
+            <li>
+              <strong>Address</strong>
+              10 S Summit Ave<br />
+              Shillington Farmers Market<br />
+              Shillington, PA 19607<br />
+              <span style="display:block;font-size:0.85rem;color:var(--muted);margin-top:0.25rem;">Find us at Shillington Farmers Market</span>
+            </li>
+            <li>
+              <strong>Hours</strong>
+              <em>Seasonal / from Facebook cover:</em><br />
+              Summer — Thursday 10 AM – 4 PM<br />
+              <span style="display:block;font-size:0.85rem;color:var(--muted);margin-top:0.25rem;">Other days by appointment. Check Facebook for current hours.</span>
+            </li>
+          </ul>
+
+          <div class="map-placeholder" role="img" aria-label="Location: 10 S Summit Ave (Shillington Farmers Market), Shillington, PA 19607">
+            <span aria-hidden="true">📍</span>
+            10 S Summit Ave<br />
+            Shillington Farmers Market<br />
+            Shillington, PA 19607<br />
+            <small>Shillington Farmers Market · Berks County</small>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="logo">
+          <img class="logo-img" src="logo.png" width="44" height="44" alt="" />
+          <span class="logo-text">
+            <span class="logo-script">Lally’s</span>
+            <span class="logo-sub">Cakes &amp; Sweets</span>
+          </span>
+        </div>
+        <p>Delightful and elegant desserts since 2012. Shillington Farmers Market · over 100 flavors.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="menu.html">Menu</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">Facebook</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="tel:+14842190445">(484) 219-0445</a></li>
+          <li>10 S Summit Ave (Shillington Farmers Market), Shillington, PA 19607</li>
+          <li>Summer hours (from Facebook): Thu 10 AM – 4 PM</li>
+          <li>Other days by appointment · check Facebook</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 Lally's Cakes &amp; Sweets · EST. 2012</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

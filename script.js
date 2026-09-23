@@ -40,7 +40,7 @@
     });
   }
 
-  // Contact form → copy inquiry text + open Facebook (no fake email)
+  // Contact form → copy inquiry text + open email compose
   var form = document.getElementById("inquire-form");
   if (form) {
     form.addEventListener("submit", function (e) {
@@ -64,8 +64,8 @@
         if (!success) return;
         success.classList.add("is-visible");
         success.textContent = copied
-          ? "Inquiry copied! Paste it into a Facebook Message — or call (484) 219-0445. Opening Facebook…"
-          : "Thanks! Call (484) 219-0445 or message us on Facebook with your details. Opening Facebook…";
+          ? "Inquiry copied! Opening your email app to lallyscakesandsweets@gmail.com…"
+          : "Opening your email app to lallyscakesandsweets@gmail.com…";
       }
 
       var copyPromise =
@@ -75,7 +75,9 @@
 
       copyPromise.then(function (ok) {
         showSuccess(ok);
-        window.open(FB_URL, "_blank", "noopener,noreferrer");
+        var subject = encodeURIComponent("Inquiry for Lally's Cakes & Sweets");
+        var body = encodeURIComponent(text);
+        window.location.href = "mailto:lallyscakesandsweets@gmail.com?subject=" + subject + "&body=" + body;
       });
     });
   }

@@ -40,45 +40,90 @@
     });
   }
 
-  // Contact form → copy inquiry text + open email compose
+  // Contact form → FormSubmit AJAX to bakery email
   var form = document.getElementById("inquire-form");
   if (form) {
     form.addEventListener("submit", function (e) {
       e.preventDefault();
+
+      var success = document.getElementById("form-success");
+      var submitBtn = form.querySelector('button[type="submit"]');
       var name = (form.querySelector("#name") || {}).value || "";
       var email = (form.querySelector("#email") || {}).value || "";
       var phone = (form.querySelector("#phone") || {}).value || "";
       var eventDate = (form.querySelector("#event-date") || {}).value || "";
       var message = (form.querySelector("#message") || {}).value || "";
 
-      var text =
-        "Inquiry for Lally's Cakes & Sweets\n" +
-        "Name: " + name + "\n" +
-        "Email: " + (email || "n/a") + "\n" +
-        "Phone: " + (phone || "n/a") + "\n" +
-        "Event date: " + (eventDate || "n/a") + "\n\n" +
-        message;
-
-      var success = document.getElementById("form-success");
-      function showSuccess(copied) {
-        if (!success) return;
-        success.classList.add("is-visible");
-        success.textContent = copied
-          ? "Inquiry copied! Opening your email app to lallyscakesandsweets@gmail.com…"
-          : "Opening your email app to lallyscakesandsweets@gmail.com…";
+      if (!name.trim() || !email.trim() || !message.trim()) {
+        if (success) {
+          success.classList.add("is-visible");
+          success.textContent = "Please fill in your name, email, and message so we can reply.";
+        }
+        return;
       }
 
-      var copyPromise =
-        navigator.clipboard && navigator.clipboard.writeText
-          ? navigator.clipboard.writeText(text).then(function () { return true; }).catch(function () { return false; })
-          : Promise.resolve(false);
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Sending…";
+      }
+      if (success) {
+        success.classList.add("is-visible");
+        success.textContent = "Sending your inquiry…";
+      }
 
-      copyPromise.then(function (ok) {
-        showSuccess(ok);
-        var subject = encodeURIComponent("Inquiry for Lally's Cakes & Sweets");
-        var body = encodeURIComponent(text);
-        window.location.href = "mailto:lallyscakesandsweets@gmail.com?subject=" + subject + "&body=" + body;
-      });
+      var payload = {
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        event_date: eventDate,
+        message: message.trim(),
+        _subject: "New inquiry — Lally's Cakes & Sweets",
+        _template: "table",
+        _captcha: "false",
+        _honey: ""
+      };
+
+      fetch("https://formsubmit.co/ajax/lallyscakesandsweets@gmail.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            return { ok: res.ok, data: data };
+          }).catch(function () {
+            return { ok: res.ok, data: null };
+          });
+        })
+        .then(function (result) {
+          if (result.ok) {
+            form.reset();
+            if (success) {
+              success.classList.add("is-visible");
+              success.textContent = "Thanks! Your inquiry is on its way to Lally's Cakes & Sweets. We’ll be in touch soon.";
+            }
+          } else {
+            if (success) {
+              success.classList.add("is-visible");
+              success.textContent = "Sorry — we couldn’t send that just now. Please try again, or use Call, Email, or Facebook above.";
+            }
+          }
+        })
+        .catch(function () {
+          if (success) {
+            success.classList.add("is-visible");
+            success.textContent = "Sorry — we couldn’t send that just now. Please try again, or use Call, Email, or Facebook above.";
+          }
+        })
+        .finally(function () {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Send inquiry";
+          }
+        });
     });
   }
 })();

@@ -39,7 +39,7 @@
       <div class="wrap">
         <span class="eyebrow">Say hello</span>
         <h1>Order / Inquire</h1>
-        <p>Reach us by <strong>phone, email, or Facebook Message</strong>. Use the form below to draft your details, then send however you prefer.</p>
+        <p>Send us a note with the form below — it goes straight to <strong>lallyscakesandsweets@gmail.com</strong>. Or call, email, or message us on Facebook.</p>
       </div>
     </div>
 
@@ -53,15 +53,19 @@
           </div>
 
           <div id="form-success" class="form-success" role="status" aria-live="polite"></div>
-          <p class="form-hint">Draft your inquiry here, then copy it into an email to <a href="mailto:lallyscakesandsweets@gmail.com">lallyscakesandsweets@gmail.com</a>, a Facebook Message, or have it ready when you call.</p>
-          <form id="inquire-form" action="#" method="get" novalidate>
+          <p class="form-hint">Fill this out and we’ll get your inquiry at <a href="mailto:lallyscakesandsweets@gmail.com">lallyscakesandsweets@gmail.com</a>. Prefer to reach out yourself? Use Call, Email, or Facebook above.</p>
+          <form id="inquire-form" action="https://formsubmit.co/ajax/lallyscakesandsweets@gmail.com" method="POST" novalidate>
+            <input type="hidden" name="_subject" value="New inquiry — Lally's Cakes &amp; Sweets" />
+            <input type="hidden" name="_template" value="table" />
+            <input type="hidden" name="_captcha" value="false" />
+            <input type="text" name="_honey" value="" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;height:0;width:0;opacity:0;" />
             <div class="form-group">
               <label for="name">Name</label>
               <input type="text" id="name" name="name" autocomplete="name" required placeholder="Your name" />
             </div>
             <div class="form-group">
-              <label for="email">Email <span style="font-weight:400;color:var(--muted);">(optional — for your notes)</span></label>
-              <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" />
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" autocomplete="email" required placeholder="you@example.com" />
             </div>
             <div class="form-group">
               <label for="phone">Phone</label>
@@ -69,13 +73,13 @@
             </div>
             <div class="form-group">
               <label for="event-date">Event date</label>
-              <input type="date" id="event-date" name="event-date" />
+              <input type="date" id="event-date" name="event_date" />
             </div>
             <div class="form-group">
               <label for="message">Message</label>
               <textarea id="message" name="message" required placeholder="Tell us about the cake or sweets you’d like, guest count, flavors, and any must-haves…"></textarea>
             </div>
-            <button type="submit" class="btn btn-primary">Copy inquiry &amp; open email</button>
+            <button type="submit" class="btn btn-primary">Send inquiry</button>
           </form>
         </div>
 

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Owner inbox — Lally's Cakes &amp; Sweets</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="Owner inquiry inbox for Lally's Cakes &amp; Sweets." />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Nunito:wght@400;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="admin-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="logo" href="index.html">
+        <img class="logo-img" src="logo.png" width="52" height="52" alt="Lally's Cakes &amp; Sweets logo" />
+        <span class="logo-text">
+          <span class="logo-script">Lally’s</span>
+          <span class="logo-sub">Cakes &amp; Sweets</span>
+        </span>
+      </a>
+      <ul class="nav-links admin-nav">
+        <li><span class="admin-nav-label">Owner inbox</span></li>
+        <li><a href="index.html">← Back to site</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="page-hero">
+      <div class="wrap">
+        <span class="eyebrow">Private</span>
+        <h1>Owner inbox</h1>
+        <p>Sign in with an owner email to view and manage contact-form inquiries.</p>
+      </div>
+    </div>
+
+    <section class="section section-tight">
+      <div class="wrap admin-wrap">
+        <!-- Logged out -->
+        <div id="admin-login" class="admin-panel form-card">
+          <h2 class="admin-panel-title">Magic-link login</h2>
+          <p class="form-hint">We’ll email you a one-time login link. Only owner accounts can see inquiries (enforced by Supabase RLS).</p>
+          <div id="login-status" class="form-success" role="status" aria-live="polite"></div>
+          <form id="login-form" novalidate>
+            <div class="form-group">
+              <label for="owner-email">Owner email</label>
+              <input type="email" id="owner-email" name="email" autocomplete="email" required placeholder="you@example.com" />
+            </div>
+            <button type="submit" class="btn btn-primary">Send login link</button>
+          </form>
+        </div>
+
+        <!-- Logged in -->
+        <div id="admin-inbox" class="admin-inbox" hidden>
+          <div class="admin-toolbar">
+            <p class="admin-signed-in">Signed in as <strong id="signed-in-email"></strong></p>
+            <button type="button" id="sign-out-btn" class="btn btn-secondary">Sign out</button>
+          </div>
+          <div id="inbox-status" class="admin-alert" role="status" aria-live="polite"></div>
+          <div id="inquiry-list" class="inquiry-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-bottom">© 2026 Lally's Cakes &amp; Sweets · Owner tools</div>
+  </footer>
+
+  <script src="admin.js"></script>
+</body>
+</html>

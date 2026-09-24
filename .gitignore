@@ -3,3 +3,4 @@ rdap/
 domain-research.md
 preview-*.png
 .DS_Store
+supabase-config.json

@@ -72,15 +72,16 @@
       }
 
       var payload = {
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        event_date: eventDate,
-        message: message.trim(),
+        Name: name.trim(),
+        Email: email.trim(),
+        Phone: phone.trim() || "—",
+        "Event date": eventDate || "—",
+        Message: message.trim(),
         _subject: "New inquiry — Lally's Cakes & Sweets",
-        _template: "table",
+        _template: "box",
         _captcha: "false",
-        _honey: ""
+        _honey: "",
+        _replyto: email.trim()
       };
 
       fetch("https://formsubmit.co/ajax/devonl721@icloud.com", {

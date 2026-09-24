@@ -1,4 +1,4 @@
-/* Lally's Cakes & Sweets — owner inbox (Supabase Auth magic link + REST) */
+/* Lally's Cakes & Sweets — owner inbox (password auth + magic-link fallback) */
 (function () {
   "use strict";
 
@@ -20,6 +20,16 @@
   var inquiryList = document.getElementById("inquiry-list");
   var signedInEmail = document.getElementById("signed-in-email");
   var signOutBtn = document.getElementById("sign-out-btn");
+
+  var magicLinkPanel = document.getElementById("magic-link-panel");
+  var createPasswordPanel = document.getElementById("create-password-panel");
+  var forgotPasswordPanel = document.getElementById("forgot-password-panel");
+  var magicLinkForm = document.getElementById("magic-link-form");
+  var createPasswordForm = document.getElementById("create-password-form");
+  var forgotPasswordForm = document.getElementById("forgot-password-form");
+  var toggleMagicLink = document.getElementById("toggle-magic-link");
+  var toggleCreatePassword = document.getElementById("toggle-create-password");
+  var toggleForgotPassword = document.getElementById("toggle-forgot-password");
 
   function anonHeaders() {
     return {
@@ -90,6 +100,85 @@
     });
   }
 
+  function adminRedirectUrl() {
+    var redirectTo =
+      window.location.origin +
+      window.location.pathname.replace(/[^/]+$/, "admin.html");
+    if (!/admin\.html$/i.test(redirectTo)) {
+      redirectTo = window.location.origin + "/admin.html";
+    }
+    return redirectTo;
+  }
+
+  function clearHash() {
+    history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search
+    );
+  }
+
+  function setLoginStatus(message, isError) {
+    if (!loginStatus) return;
+    if (!message) {
+      loginStatus.classList.remove("is-visible", "is-error");
+      loginStatus.textContent = "";
+      return;
+    }
+    loginStatus.classList.add("is-visible");
+    loginStatus.classList.toggle("is-error", !!isError);
+    loginStatus.textContent = message;
+  }
+
+  function friendlyAuthError(data, fallback) {
+    var raw =
+      (data &&
+        (data.error_description ||
+          data.msg ||
+          data.error ||
+          data.message)) ||
+      "";
+    var lower = String(raw).toLowerCase();
+    if (
+      lower.indexOf("invalid login") !== -1 ||
+      lower.indexOf("invalid_grant") !== -1 ||
+      lower.indexOf("invalid credentials") !== -1
+    ) {
+      return "Invalid email or password. Try again, or create a password / use a magic link.";
+    }
+    if (
+      lower.indexOf("email not confirmed") !== -1 ||
+      lower.indexOf("not confirmed") !== -1
+    ) {
+      return "Please confirm your email first (check your inbox), then sign in.";
+    }
+    if (
+      lower.indexOf("already registered") !== -1 ||
+      lower.indexOf("already been registered") !== -1 ||
+      lower.indexOf("user already") !== -1
+    ) {
+      return "That email already has an account. Sign in, or use Forgot password if you need a reset.";
+    }
+    if (lower.indexOf("password") !== -1 && lower.indexOf("weak") !== -1) {
+      return "Please choose a stronger password (at least 6 characters).";
+    }
+    if (raw) return raw;
+    return fallback || "Something went wrong. Try again.";
+  }
+
+  function sessionFromTokenResponse(data) {
+    var email =
+      (data.user && data.user.email) ||
+      decodeJwtEmail(data.access_token) ||
+      "";
+    return {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token || "",
+      expires_at: Date.now() + (data.expires_in || 3600) * 1000,
+      user: { email: email }
+    };
+  }
+
   function refreshSession(session) {
     if (!session || !session.refresh_token) {
       return Promise.reject(new Error("No refresh token"));
@@ -110,15 +199,9 @@
               "Refresh failed"
           );
         }
-        var next = {
-          access_token: data.access_token,
-          refresh_token: data.refresh_token || session.refresh_token,
-          expires_at: Date.now() + (data.expires_in || 3600) * 1000,
-          user: data.user || session.user || null
-        };
-        if (!next.user || !next.user.email) {
-          next.user = next.user || {};
-          next.user.email = decodeJwtEmail(next.access_token);
+        var next = sessionFromTokenResponse(data);
+        if (!next.user.email && session.user && session.user.email) {
+          next.user.email = session.user.email;
         }
         saveSession(next);
         return next;
@@ -131,12 +214,7 @@
     if (fromHash) {
       fromHash.user = { email: decodeJwtEmail(fromHash.access_token) };
       saveSession(fromHash);
-      // Clean hash so refresh doesn't re-parse
-      history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search
-      );
+      clearHash();
       return Promise.resolve(fromHash);
     }
 
@@ -165,10 +243,7 @@
   function showLogin(message) {
     if (loginView) loginView.hidden = false;
     if (inboxView) inboxView.hidden = true;
-    if (loginStatus && message) {
-      loginStatus.classList.add("is-visible");
-      loginStatus.textContent = message;
-    }
+    if (message) setLoginStatus(message, false);
   }
 
   function showInbox(session) {
@@ -191,6 +266,23 @@
     }
 
     loadInquiries(session);
+  }
+
+  function hideAllAuthPanels() {
+    if (magicLinkPanel) magicLinkPanel.hidden = true;
+    if (createPasswordPanel) createPasswordPanel.hidden = true;
+    if (forgotPasswordPanel) forgotPasswordPanel.hidden = true;
+  }
+
+  function togglePanel(panel) {
+    if (!panel) return;
+    var wasHidden = panel.hidden;
+    hideAllAuthPanels();
+    panel.hidden = !wasHidden;
+    if (!panel.hidden) {
+      var firstInput = panel.querySelector("input");
+      if (firstInput) firstInput.focus();
+    }
   }
 
   function formatDate(iso) {
@@ -459,17 +551,105 @@
       });
   }
 
+  function parseJsonResponse(res) {
+    return res
+      .json()
+      .then(function (data) {
+        return { ok: res.ok, status: res.status, data: data };
+      })
+      .catch(function () {
+        return { ok: res.ok, status: res.status, data: null };
+      });
+  }
+
+  /* ---- Password sign-in (primary) ---- */
   if (loginForm) {
     loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
       var emailInput = document.getElementById("owner-email");
+      var passwordInput = document.getElementById("owner-password");
       var email = (emailInput && emailInput.value.trim()) || "";
+      var password = (passwordInput && passwordInput.value) || "";
       var submitBtn = loginForm.querySelector('button[type="submit"]');
+
+      if (!email || !password) {
+        setLoginStatus("Enter your owner email and password.", true);
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Signing in…";
+      }
+      setLoginStatus("Signing in…", false);
+
+      fetch(SUPABASE_URL + "/auth/v1/token?grant_type=password", {
+        method: "POST",
+        headers: anonHeaders(),
+        body: JSON.stringify({ email: email, password: password })
+      })
+        .then(parseJsonResponse)
+        .then(function (result) {
+          if (result.ok && result.data && result.data.access_token) {
+            var session = sessionFromTokenResponse(result.data);
+            if (!session.user.email) session.user.email = email;
+            saveSession(session);
+            clearHash();
+            setLoginStatus("", false);
+            if (passwordInput) passwordInput.value = "";
+            showInbox(session);
+            return;
+          }
+          setLoginStatus(
+            friendlyAuthError(
+              result.data,
+              "Couldn’t sign in. Check your email and password."
+            ),
+            true
+          );
+        })
+        .catch(function () {
+          setLoginStatus(
+            "Couldn’t sign in. Check your connection and try again.",
+            true
+          );
+        })
+        .finally(function () {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Sign in";
+          }
+        });
+    });
+  }
+
+  /* ---- Magic-link fallback ---- */
+  if (toggleMagicLink) {
+    toggleMagicLink.addEventListener("click", function () {
+      togglePanel(magicLinkPanel);
+      var mainEmail = document.getElementById("owner-email");
+      var magicEmail = document.getElementById("magic-email");
+      if (
+        magicLinkPanel &&
+        !magicLinkPanel.hidden &&
+        magicEmail &&
+        mainEmail &&
+        mainEmail.value &&
+        !magicEmail.value
+      ) {
+        magicEmail.value = mainEmail.value;
+      }
+    });
+  }
+
+  if (magicLinkForm) {
+    magicLinkForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var emailInput = document.getElementById("magic-email");
+      var email = (emailInput && emailInput.value.trim()) || "";
+      var submitBtn = magicLinkForm.querySelector('button[type="submit"]');
       if (!email) {
-        if (loginStatus) {
-          loginStatus.classList.add("is-visible");
-          loginStatus.textContent = "Enter your owner email address.";
-        }
+        setLoginStatus("Enter your owner email address.", true);
         return;
       }
 
@@ -477,60 +657,38 @@
         submitBtn.disabled = true;
         submitBtn.textContent = "Sending…";
       }
-      if (loginStatus) {
-        loginStatus.classList.add("is-visible");
-        loginStatus.textContent = "Sending login link…";
-      }
-
-      // Redirect back to this admin page after magic-link click
-      var redirectTo =
-        window.location.origin +
-        window.location.pathname.replace(/[^/]+$/, "admin.html");
-      if (!/admin\.html$/i.test(redirectTo)) {
-        redirectTo = window.location.origin + "/admin.html";
-      }
+      setLoginStatus("Sending login link…", false);
 
       fetch(SUPABASE_URL + "/auth/v1/otp", {
         method: "POST",
         headers: anonHeaders(),
         body: JSON.stringify({
           email: email,
-          options: { emailRedirectTo: redirectTo }
+          options: { emailRedirectTo: adminRedirectUrl() }
         })
       })
-        .then(function (res) {
-          return res.json().then(function (data) {
-            return { ok: res.ok, data: data };
-          }).catch(function () {
-            return { ok: res.ok, data: null };
-          });
-        })
+        .then(parseJsonResponse)
         .then(function (result) {
           if (result.ok) {
-            if (loginStatus) {
-              loginStatus.classList.add("is-visible");
-              loginStatus.textContent =
-                "Check your email for a login link. Only owner emails can see inquiries.";
-            }
+            setLoginStatus(
+              "Check your email for a login link. Only owner emails can see inquiries.",
+              false
+            );
           } else {
-            var errMsg =
-              (result.data &&
-                (result.data.error_description ||
-                  result.data.msg ||
-                  result.data.error)) ||
-              "Couldn’t send login link. Try again.";
-            if (loginStatus) {
-              loginStatus.classList.add("is-visible");
-              loginStatus.textContent = errMsg;
-            }
+            setLoginStatus(
+              friendlyAuthError(
+                result.data,
+                "Couldn’t send login link. Try again."
+              ),
+              true
+            );
           }
         })
         .catch(function () {
-          if (loginStatus) {
-            loginStatus.classList.add("is-visible");
-            loginStatus.textContent =
-              "Couldn’t send login link. Check your connection and try again.";
-          }
+          setLoginStatus(
+            "Couldn’t send login link. Check your connection and try again.",
+            true
+          );
         })
         .finally(function () {
           if (submitBtn) {
@@ -541,10 +699,212 @@
     });
   }
 
+  /* ---- Create password (signUp) ---- */
+  if (toggleCreatePassword) {
+    toggleCreatePassword.addEventListener("click", function () {
+      togglePanel(createPasswordPanel);
+      var mainEmail = document.getElementById("owner-email");
+      var signupEmail = document.getElementById("signup-email");
+      if (
+        createPasswordPanel &&
+        !createPasswordPanel.hidden &&
+        signupEmail &&
+        mainEmail &&
+        mainEmail.value &&
+        !signupEmail.value
+      ) {
+        signupEmail.value = mainEmail.value;
+      }
+    });
+  }
+
+  if (createPasswordForm) {
+    createPasswordForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var emailInput = document.getElementById("signup-email");
+      var passwordInput = document.getElementById("signup-password");
+      var confirmInput = document.getElementById("signup-password-confirm");
+      var email = (emailInput && emailInput.value.trim()) || "";
+      var password = (passwordInput && passwordInput.value) || "";
+      var confirm = (confirmInput && confirmInput.value) || "";
+      var submitBtn = createPasswordForm.querySelector('button[type="submit"]');
+
+      if (!email || !password) {
+        setLoginStatus("Enter an email and password to create an account.", true);
+        return;
+      }
+      if (password.length < 6) {
+        setLoginStatus("Password must be at least 6 characters.", true);
+        return;
+      }
+      if (password !== confirm) {
+        setLoginStatus("Passwords don’t match. Try again.", true);
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Creating…";
+      }
+      if (!isOwnerEmail(email)) {
+        setLoginStatus(
+          "Note: that email isn’t on the owner list. Creating account anyway — inquiries stay owner-only (RLS).",
+          true
+        );
+      } else {
+        setLoginStatus("Creating password…", false);
+      }
+
+      fetch(SUPABASE_URL + "/auth/v1/signup", {
+        method: "POST",
+        headers: anonHeaders(),
+        body: JSON.stringify({ email: email, password: password })
+      })
+        .then(parseJsonResponse)
+        .then(function (result) {
+          if (!result.ok) {
+            setLoginStatus(
+              friendlyAuthError(
+                result.data,
+                "Couldn’t create password. Try again."
+              ),
+              true
+            );
+            return;
+          }
+
+          // Some projects return identities: [] when email already exists
+          var identities =
+            result.data &&
+            result.data.user &&
+            result.data.user.identities;
+          if (Array.isArray(identities) && identities.length === 0) {
+            setLoginStatus(
+              "That email already has an account. Sign in, or use Forgot password if you need a reset.",
+              true
+            );
+            return;
+          }
+
+          if (result.data && result.data.access_token) {
+            var session = sessionFromTokenResponse(result.data);
+            if (!session.user.email) session.user.email = email;
+            saveSession(session);
+            clearHash();
+            if (passwordInput) passwordInput.value = "";
+            if (confirmInput) confirmInput.value = "";
+            setLoginStatus("", false);
+            showInbox(session);
+            return;
+          }
+
+          setLoginStatus(
+            "Check your email to confirm, then sign in with your new password.",
+            false
+          );
+          if (passwordInput) passwordInput.value = "";
+          if (confirmInput) confirmInput.value = "";
+          hideAllAuthPanels();
+        })
+        .catch(function () {
+          setLoginStatus(
+            "Couldn’t create password. Check your connection and try again.",
+            true
+          );
+        })
+        .finally(function () {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Create password";
+          }
+        });
+    });
+  }
+
+  /* ---- Forgot password (recover) ---- */
+  if (toggleForgotPassword) {
+    toggleForgotPassword.addEventListener("click", function () {
+      togglePanel(forgotPasswordPanel);
+      var mainEmail = document.getElementById("owner-email");
+      var recoverEmail = document.getElementById("recover-email");
+      if (
+        forgotPasswordPanel &&
+        !forgotPasswordPanel.hidden &&
+        recoverEmail &&
+        mainEmail &&
+        mainEmail.value &&
+        !recoverEmail.value
+      ) {
+        recoverEmail.value = mainEmail.value;
+      }
+    });
+  }
+
+  if (forgotPasswordForm) {
+    forgotPasswordForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var emailInput = document.getElementById("recover-email");
+      var email = (emailInput && emailInput.value.trim()) || "";
+      var submitBtn = forgotPasswordForm.querySelector('button[type="submit"]');
+      if (!email) {
+        setLoginStatus("Enter your owner email to reset your password.", true);
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Sending…";
+      }
+      setLoginStatus("Sending reset email…", false);
+
+      var recoverUrl =
+        SUPABASE_URL +
+        "/auth/v1/recover?redirect_to=" +
+        encodeURIComponent(adminRedirectUrl());
+
+      fetch(recoverUrl, {
+        method: "POST",
+        headers: anonHeaders(),
+        body: JSON.stringify({ email: email })
+      })
+        .then(parseJsonResponse)
+        .then(function (result) {
+          if (result.ok) {
+            setLoginStatus(
+              "Check your email for a password reset link, then return here to sign in.",
+              false
+            );
+            hideAllAuthPanels();
+          } else {
+            setLoginStatus(
+              friendlyAuthError(
+                result.data,
+                "Couldn’t send reset email. Try again."
+              ),
+              true
+            );
+          }
+        })
+        .catch(function () {
+          setLoginStatus(
+            "Couldn’t send reset email. Check your connection and try again.",
+            true
+          );
+        })
+        .finally(function () {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Send reset email";
+          }
+        });
+    });
+  }
+
   if (signOutBtn) {
     signOutBtn.addEventListener("click", function () {
       clearSession();
-      showLogin("Signed out. Enter your owner email to get a new login link.");
+      hideAllAuthPanels();
+      showLogin("Signed out. Sign in with your owner email and password.");
     });
   }
 
@@ -553,10 +913,7 @@
       showInbox(session);
     } else {
       showLogin("");
-      if (loginStatus) {
-        loginStatus.classList.remove("is-visible");
-        loginStatus.textContent = "";
-      }
+      setLoginStatus("", false);
     }
   });
 })();

@@ -45,16 +45,75 @@
       <div class="wrap admin-wrap">
         <!-- Logged out -->
         <div id="admin-login" class="admin-panel form-card">
-          <h2 class="admin-panel-title">Magic-link login</h2>
-          <p class="form-hint">We’ll email you a one-time login link. Only owner accounts can see inquiries (enforced by Supabase RLS).</p>
+          <h2 class="admin-panel-title">Owner sign in</h2>
+          <p class="form-hint">Sign in on this page with your owner email and password. Only owner emails can see inquiries.</p>
           <div id="login-status" class="form-success" role="status" aria-live="polite"></div>
+
+          <!-- Primary: email + password -->
           <form id="login-form" novalidate>
             <div class="form-group">
               <label for="owner-email">Owner email</label>
-              <input type="email" id="owner-email" name="email" autocomplete="email" required placeholder="you@example.com" />
+              <input type="email" id="owner-email" name="email" autocomplete="username" required placeholder="you@example.com" />
             </div>
-            <button type="submit" class="btn btn-primary">Send login link</button>
+            <div class="form-group">
+              <label for="owner-password">Password</label>
+              <input type="password" id="owner-password" name="password" autocomplete="current-password" required placeholder="Your password" />
+            </div>
+            <button type="submit" class="btn btn-primary">Sign in</button>
           </form>
+
+          <div class="admin-auth-links">
+            <button type="button" id="toggle-magic-link" class="admin-text-btn">Email me a magic link instead</button>
+            <button type="button" id="toggle-create-password" class="admin-text-btn">Create password</button>
+            <button type="button" id="toggle-forgot-password" class="admin-text-btn">Forgot password?</button>
+          </div>
+
+          <!-- Magic-link fallback (hidden by default) -->
+          <div id="magic-link-panel" class="admin-auth-panel" hidden>
+            <h3 class="admin-auth-panel-title">Magic-link login</h3>
+            <p class="form-hint">We’ll email you a one-time login link. Only owner accounts can see inquiries.</p>
+            <form id="magic-link-form" novalidate>
+              <div class="form-group">
+                <label for="magic-email">Owner email</label>
+                <input type="email" id="magic-email" name="email" autocomplete="email" required placeholder="you@example.com" />
+              </div>
+              <button type="submit" class="btn btn-secondary">Send login link</button>
+            </form>
+          </div>
+
+          <!-- Create password / first-time signup -->
+          <div id="create-password-panel" class="admin-auth-panel" hidden>
+            <h3 class="admin-auth-panel-title">Create password</h3>
+            <p class="form-hint">First time? Set a password for your owner email. You may need to confirm via email before signing in.</p>
+            <form id="create-password-form" novalidate>
+              <div class="form-group">
+                <label for="signup-email">Owner email</label>
+                <input type="email" id="signup-email" name="email" autocomplete="username" required placeholder="you@example.com" />
+              </div>
+              <div class="form-group">
+                <label for="signup-password">Password</label>
+                <input type="password" id="signup-password" name="password" autocomplete="new-password" required minlength="6" placeholder="Choose a password" />
+              </div>
+              <div class="form-group">
+                <label for="signup-password-confirm">Confirm password</label>
+                <input type="password" id="signup-password-confirm" name="password_confirm" autocomplete="new-password" required minlength="6" placeholder="Confirm password" />
+              </div>
+              <button type="submit" class="btn btn-secondary">Create password</button>
+            </form>
+          </div>
+
+          <!-- Forgot password -->
+          <div id="forgot-password-panel" class="admin-auth-panel" hidden>
+            <h3 class="admin-auth-panel-title">Forgot password?</h3>
+            <p class="form-hint">We’ll email you a link to reset your password.</p>
+            <form id="forgot-password-form" novalidate>
+              <div class="form-group">
+                <label for="recover-email">Owner email</label>
+                <input type="email" id="recover-email" name="email" autocomplete="email" required placeholder="you@example.com" />
+              </div>
+              <button type="submit" class="btn btn-secondary">Send reset email</button>
+            </form>
+          </div>
         </div>
 
         <!-- Logged in -->

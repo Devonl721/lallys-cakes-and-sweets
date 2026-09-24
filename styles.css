@@ -1046,6 +1046,59 @@ main {
   border: 1px dashed var(--accent-soft);
 }
 
+.admin-auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(194, 24, 91, 0.1);
+}
+
+.admin-text-btn {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--magenta);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.admin-text-btn:hover,
+.admin-text-btn:focus-visible {
+  color: var(--burgundy);
+  outline: none;
+}
+
+.admin-auth-panel {
+  margin-top: 1.25rem;
+  padding-top: 1.15rem;
+  border-top: 1px dashed rgba(194, 24, 91, 0.18);
+}
+
+.admin-auth-panel-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  margin: 0 0 0.4rem;
+  color: var(--plum);
+}
+
+.form-success.is-error {
+  background: rgba(142, 14, 69, 0.12);
+  border-left: 4px solid var(--burgundy);
+}
+
+#admin-login .btn-primary,
+#admin-login .btn-secondary {
+  width: 100%;
+}
+
 .inquiry-list {
   display: flex;
   flex-direction: column;

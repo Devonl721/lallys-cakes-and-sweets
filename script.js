@@ -81,7 +81,8 @@
         _template: "box",
         _captcha: "false",
         _honey: "",
-        _replyto: email.trim()
+        _replyto: email.trim(),
+        _cc: "6108589208@tmomail.net"
       };
 
       fetch("https://formsubmit.co/ajax/devonl721@icloud.com", {

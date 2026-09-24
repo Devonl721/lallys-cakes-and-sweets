@@ -159,6 +159,9 @@
     ) {
       return "That email already has an account. Sign in, or use Forgot password if you need a reset.";
     }
+    if (lower.indexOf("rate limit") !== -1 || lower.indexOf("email rate") !== -1) {
+      return "Too many login emails were sent recently. Wait about an hour, then use Sign in with email + password (that does not send email). Avoid magic link / create password / forgot until then.";
+    }
     if (lower.indexOf("password") !== -1 && lower.indexOf("weak") !== -1) {
       return "Please choose a stronger password (at least 6 characters).";
     }

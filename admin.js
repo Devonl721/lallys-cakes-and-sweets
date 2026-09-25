@@ -47,6 +47,8 @@
     session: null,
     rows: [],
     legacy: false, // true when migration 002 hasn't been applied
+    softDelete: false, // true when migration 003 (deleted_at column) is applied
+    deletedRows: [], // rows with deleted_at set ("Recently deleted")
     view: "board",
     showClosed: false,
     listFilter: "active",
@@ -388,14 +390,42 @@
         throw err;
       });
   }
+  /** Is migration 003 (deleted_at) applied? If not, Delete / Recently deleted stay hidden. */
+  function detectSoftDelete() {
+    return api("GET", "/rest/v1/inquiries?select=id,deleted_at&limit=1")
+      .then(function () { state.softDelete = true; })
+      .catch(function (err) {
+        if (isMissingColumnError(err)) { state.softDelete = false; return; }
+        throw err;
+      });
+  }
+
+  var ALL_ROWS_PATH = "/rest/v1/inquiries?select=*&order=created_at.desc";
+  function fetchRows() {
+    if (!state.softDelete) {
+      return api("GET", ALL_ROWS_PATH).then(function (rows) { return { rows: rows, deleted: [] }; });
+    }
+    return Promise.all([
+      api("GET", ALL_ROWS_PATH + "&deleted_at=is.null"),
+      api("GET", "/rest/v1/inquiries?select=*&deleted_at=not.is.null&order=deleted_at.desc")
+    ]).then(function (res) { return { rows: res[0], deleted: res[1] }; })
+      .catch(function (err) {
+        // Column vanished between detection and load: fall back quietly.
+        if (!isMissingColumnError(err)) throw err;
+        state.softDelete = false;
+        return fetchRows();
+      });
+  }
 
   function loadRows(quiet) {
     if (!quiet) setAlert(appStatus, "Loading orders…");
-    return detectSchema()
-      .then(function () { return api("GET", "/rest/v1/inquiries?select=*&order=created_at.desc"); })
-      .then(function (rows) {
-        state.rows = (rows || []).map(normalize);
+    return Promise.all([detectSchema(), detectSoftDelete()])
+      .then(fetchRows)
+      .then(function (res) {
+        state.rows = (res.rows || []).map(normalize).filter(function (r) { return !r.deleted_at; });
+        state.deletedRows = (res.deleted || []).map(normalize);
         showSchemaNotice();
+        applySoftDeleteUI();
         renderAll();
       })
       .catch(function (err) {
@@ -423,6 +453,17 @@
       addBtn.disabled = state.legacy;
       addBtn.title = state.legacy ? "Available after the database upgrade" : "";
     }
+  }
+
+  /** Show or hide the Delete / Recently deleted controls (migration 003). */
+  function applySoftDeleteUI() {
+    var on = state.softDelete;
+    document.body.classList.toggle("has-soft-delete", on);
+    var tab = document.querySelector('.view-tab[data-view="deleted"]');
+    if (tab) tab.hidden = !on;
+    var del = $("delete-btn");
+    if (del) del.hidden = !on || state.editingId === null || state.editingId === "new";
+    if (!on && state.view === "deleted") setView("board");
   }
 
   /* ---------------- Saving ---------------- */
@@ -472,11 +513,148 @@
       });
   }
 
+  /* ---------------- Recently deleted (soft delete) ---------------- */
+  var DELETE_DAYS = 30;
+  var DELETE_CONFIRM = "Move this inquiry to Recently deleted? You can restore it for 30 days.";
+
+  function removeFrom(list, id) {
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(id)) return list.splice(i, 1)[0];
+    }
+    return null;
+  }
+  function softDeleteError(err) {
+    if (isMissingColumnError(err)) {
+      state.softDelete = false;
+      applySoftDeleteUI();
+      renderAll();
+      return "Delete needs the database upgrade (migration 003).";
+    }
+    return describeError(err);
+  }
+
+  /** Never a hard delete: only sets deleted_at. */
+  function askSoftDelete(id) {
+    var row = findRow(id);
+    if (!row || !state.softDelete) return;
+    confirmDialog(DELETE_CONFIRM, { title: "Delete " + (row.name || "this inquiry") + "?", ok: "Move to Recently deleted", danger: true })
+      .then(function (yes) { if (yes) softDelete(id); });
+  }
+  function softDelete(id) {
+    var row = findRow(id);
+    if (!row) return;
+    var stamp = new Date().toISOString();
+    removeFrom(state.rows, id);
+    renderAll();
+    api("PATCH", "/rest/v1/inquiries?id=eq." + encodeURIComponent(id), { deleted_at: stamp }, "return=representation")
+      .then(function (rows) {
+        var saved = rows && rows[0];
+        if (!saved) throw { kind: "forbidden" };
+        removeFrom(state.deletedRows, id);
+        state.deletedRows.unshift(normalize(saved));
+        renderAll();
+        toast("Moved to Recently deleted · " + (row.name || "Order"));
+      })
+      .catch(function (err) {
+        state.rows.push(row);
+        renderAll();
+        if (handleAuthLoss(err)) return;
+        toast(softDeleteError(err), "error");
+      });
+  }
+  function restoreDeleted(id) {
+    var row = null;
+    for (var i = 0; i < state.deletedRows.length; i++) if (String(state.deletedRows[i].id) === String(id)) row = state.deletedRows[i];
+    if (!row) return;
+    removeFrom(state.deletedRows, id);
+    renderAll();
+    api("PATCH", "/rest/v1/inquiries?id=eq." + encodeURIComponent(id), { deleted_at: null }, "return=representation")
+      .then(function (rows) {
+        var saved = rows && rows[0];
+        if (!saved) throw { kind: "forbidden" };
+        replaceRow(normalize(saved));
+        renderAll();
+        toast("Restored · " + (row.name || "Order"));
+      })
+      .catch(function (err) {
+        state.deletedRows.unshift(row);
+        renderAll();
+        if (handleAuthLoss(err)) return;
+        toast(softDeleteError(err), "error");
+      });
+  }
+  /** Whole days until the daily cleanup removes it for good (30 − days since deleted, min 0). */
+  function daysLeft(deletedAt) {
+    var t = Date.parse(deletedAt);
+    if (isNaN(t)) return DELETE_DAYS;
+    var since = Math.floor((Date.now() - t) / 86400000);
+    return Math.max(0, DELETE_DAYS - since);
+  }
+  function renderDeleted() {
+    var box = $("deleted-list");
+    clear(box);
+    var rows = state.deletedRows.slice().sort(function (a, b) {
+      return String(b.deleted_at || "").localeCompare(String(a.deleted_at || ""));
+    });
+    $("deleted-count").textContent = rows.length + (rows.length === 1 ? " inquiry" : " inquiries");
+    if (!rows.length) {
+      box.appendChild(h("p", { class: "admin-empty", text: "Nothing here. Deleted inquiries stay for 30 days so you can restore them." }));
+      return;
+    }
+    rows.forEach(function (r) {
+      var left = daysLeft(r.deleted_at);
+      var summary = summaryText(r);
+      box.appendChild(h("article", { class: "deleted-card" },
+        h("div", { class: "deleted-info" },
+          h("strong", { class: "card-name", text: r.name || "(no name)" }),
+          summary ? h("p", { class: "card-summary", text: preview(summary, 90) }) : null,
+          h("p", { class: "deleted-meta" }, "Deleted " + fmtStamp(r.deleted_at)),
+          h("p", { class: "deleted-left" + (left <= 3 ? " is-soon" : "") },
+            left === 0 ? "Removed at the next nightly cleanup"
+              : left + (left === 1 ? " day" : " days") + " left before permanent removal")
+        ),
+        h("button", { type: "button", class: "btn btn-secondary btn-sm restore-btn",
+          "aria-label": "Restore " + (r.name || "inquiry"),
+          onclick: function () { restoreDeleted(r.id); } }, "↩ Restore")
+      ));
+    });
+  }
+
+  /* ---------------- In-page confirm dialog ---------------- */
+  var confirmModal = $("confirm-modal");
+  var confirmResolve = null, confirmLastFocus = null;
+  function confirmDialog(message, opts) {
+    opts = opts || {};
+    if (confirmResolve) confirmResolve(false);
+    confirmLastFocus = document.activeElement;
+    $("confirm-title").textContent = opts.title || "Are you sure?";
+    $("confirm-message").textContent = message;
+    var ok = $("confirm-ok");
+    ok.textContent = opts.ok || "OK";
+    ok.classList.toggle("btn-danger", !!opts.danger);
+    confirmModal.hidden = false;
+    document.body.classList.add("modal-open");
+    setTimeout(function () { $("confirm-cancel").focus(); }, 30);
+    return new Promise(function (resolve) { confirmResolve = resolve; });
+  }
+  function closeConfirm(result) {
+    confirmModal.hidden = true;
+    if (modal.hidden && printModal.hidden) document.body.classList.remove("modal-open");
+    var r = confirmResolve; confirmResolve = null;
+    if (confirmLastFocus && confirmLastFocus.focus && document.body.contains(confirmLastFocus)) confirmLastFocus.focus();
+    if (r) r(result);
+  }
+  $("confirm-ok").addEventListener("click", function () { closeConfirm(true); });
+  confirmModal.addEventListener("click", function (e) {
+    if (e.target === confirmModal || e.target.closest("[data-close-confirm]")) closeConfirm(false);
+  });
+
   /* ---------------- Rendering ---------------- */
   function renderAll() {
     renderSummary();
     if (state.view === "board") renderBoard();
     else if (state.view === "list") renderList();
+    else if (state.view === "deleted") renderDeleted();
     else renderWeek();
   }
 
@@ -559,7 +737,12 @@
               "aria-label": nextKey ? "Move forward to " + stage(nextKey).label : "Move forward",
               disabled: !nextKey || (state.legacy && !NEW_TO_LEGACY[nextKey]) ? true : null,
               onclick: function (e) { e.stopPropagation(); if (nextKey) moveTo(r.id, nextKey); }
-            }, nextKey ? stage(nextKey).short + " ›" : "›")
+            }, nextKey ? stage(nextKey).short + " ›" : "›"),
+        state.softDelete ? h("button", {
+          type: "button", class: "card-step card-delete", title: "Delete",
+          "aria-label": "Delete " + (r.name || "order") + " (moves to Recently deleted)",
+          onclick: function (e) { e.stopPropagation(); askSoftDelete(r.id); }
+        }, h("span", { "aria-hidden": "true", text: "🗑" })) : null
       )
     );
 
@@ -736,6 +919,9 @@
     $("view-board").hidden = v !== "board";
     $("view-list").hidden = v !== "list";
     $("view-week").hidden = v !== "week";
+    $("view-deleted").hidden = v !== "deleted";
+    var closedToggle = $("show-closed").closest("label");
+    if (closedToggle) closedToggle.hidden = v === "deleted";
     savePrefs();
     renderAll();
   }
@@ -743,7 +929,7 @@
   function savePrefs() {
     try {
       localStorage.setItem(PREFS_KEY, JSON.stringify({
-        view: state.viewChosen ? state.view : null, showClosed: state.showClosed, listSort: state.listSort
+        view: state.viewChosen && state.view !== "deleted" ? state.view : null, showClosed: state.showClosed, listSort: state.listSort
       }));
     } catch (e) {}
   }
@@ -825,6 +1011,7 @@
     }
     $("modal-meta").textContent = meta.join(" · ");
     $("archive-btn").hidden = creating || r.status === "archived";
+    $("delete-btn").hidden = creating || !state.softDelete;
 
     modal.hidden = false;
     document.body.classList.add("modal-open");
@@ -942,11 +1129,20 @@
     moveTo(id, "archived");
   });
 
+  $("delete-btn").addEventListener("click", function () {
+    var id = state.editingId;
+    if (!id || id === "new") return;
+    closeModal();
+    askSoftDelete(id);
+  });
+
   modal.addEventListener("click", function (e) {
     if (e.target === modal || e.target.closest("[data-close]")) closeModal();
   });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !modal.hidden) closeModal();
+    if (e.key !== "Escape") return;
+    if (!confirmModal.hidden) { closeConfirm(false); return; }
+    if (!modal.hidden) closeModal();
   });
 
   /* ---------------- Printable prep list ---------------- */
@@ -1194,6 +1390,7 @@
     }
     clearSession();
     state.rows = [];
+    state.deletedRows = [];
     showLogin("Signed out.", false);
   });
   $("refresh-btn").addEventListener("click", function () { loadRows().then(function () { if (!state.legacy) toast("Up to date ✓"); }); });

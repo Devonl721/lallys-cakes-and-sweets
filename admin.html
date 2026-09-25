@@ -135,6 +135,7 @@
             <button type="button" role="tab" class="view-tab" data-view="board" aria-selected="true">Board</button>
             <button type="button" role="tab" class="view-tab" data-view="list" aria-selected="false">List</button>
             <button type="button" role="tab" class="view-tab" data-view="week" aria-selected="false">This week</button>
+            <button type="button" role="tab" class="view-tab" data-view="deleted" aria-selected="false" aria-label="Recently deleted" hidden>Deleted</button>
           </div>
           <label class="toggle-inline">
             <input type="checkbox" id="show-closed" />
@@ -165,6 +166,16 @@
         <!-- Due this week -->
         <div id="view-week" class="view" role="tabpanel" hidden>
           <div id="week-list" class="week-list"></div>
+        </div>
+
+        <!-- Recently deleted (needs migration 003; hidden otherwise) -->
+        <div id="view-deleted" class="view" role="tabpanel" hidden>
+          <div class="deleted-head">
+            <h2 class="deleted-title">Recently deleted</h2>
+            <p class="deleted-hint">Deleted inquiries stay here for 30 days, then are removed for good. Tap Restore to put one back on the board.</p>
+            <p class="list-count" id="deleted-count"></p>
+          </div>
+          <div class="deleted-list" id="deleted-list"></div>
         </div>
       </div>
     </section>
@@ -288,6 +299,7 @@
 
         <footer class="modal-foot">
           <button type="button" class="btn btn-secondary btn-sm" id="archive-btn">Archive</button>
+          <button type="button" class="btn btn-secondary btn-sm btn-delete" id="delete-btn" hidden>Delete</button>
           <span class="modal-foot-spacer"></span>
           <button type="button" class="btn btn-secondary btn-sm" data-close>Cancel</button>
           <button type="submit" class="btn btn-primary btn-sm" id="save-order-btn">Save</button>
@@ -323,6 +335,20 @@
           <button type="submit" class="btn btn-primary btn-sm">🖨 Print</button>
         </footer>
       </form>
+    </div>
+  </div>
+
+  <!-- ============ Confirm (styled, replaces window.confirm) ============ -->
+  <div class="modal-backdrop" id="confirm-modal" hidden>
+    <div class="modal modal-small modal-confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+      <div class="modal-body">
+        <h2 class="confirm-title" id="confirm-title">Are you sure?</h2>
+        <p class="confirm-message" id="confirm-message"></p>
+      </div>
+      <footer class="modal-foot confirm-foot">
+        <button type="button" class="btn btn-secondary btn-sm" id="confirm-cancel" data-close-confirm>Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="confirm-ok">OK</button>
+      </footer>
     </div>
   </div>
 

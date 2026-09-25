@@ -653,3 +653,73 @@ body.modal-open .toast { bottom: 5.25rem; }
   .ps-money { width: 48pt; text-align: right; white-space: nowrap; }
   .ps-bal { font-weight: 800; }
 }
+
+/* —— Recently deleted (migration 003) —— */
+.card-delete {
+  color: var(--burgundy);
+  font-size: 1rem;
+  padding: 0 0.5rem;
+}
+.card-delete:hover:not([disabled]) { background: #fde8ee; }
+.btn-delete { color: var(--burgundy); border-color: rgba(136, 14, 79, 0.35); }
+.btn-delete:hover { background: #fde8ee; color: var(--burgundy); }
+.btn-danger,
+.btn-danger:hover { background: var(--burgundy); border-color: var(--burgundy); color: #fff; }
+
+.deleted-head { margin-bottom: 0.6rem; }
+.deleted-title { margin: 0 0 0.2rem; font-family: var(--font-display); font-size: 1.3rem; }
+.deleted-hint { margin: 0 0 0.4rem; font-size: 0.9rem; color: var(--plum-soft); }
+.deleted-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 0.7rem;
+}
+.deleted-list .admin-empty { grid-column: 1 / -1; }
+.deleted-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--card);
+  border: 1px solid rgba(194, 24, 91, 0.1);
+  border-left: 4px solid rgba(74, 28, 50, 0.25);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  padding: 0.7rem 0.8rem;
+  min-width: 0;
+}
+.deleted-info { flex: 1 1 auto; min-width: 0; }
+.deleted-info .card-summary { margin-top: 0.2rem; }
+.deleted-meta { margin: 0.3rem 0 0; font-size: 0.82rem; color: var(--muted); font-weight: 700; }
+.deleted-left { margin: 0.15rem 0 0; font-size: 0.84rem; font-weight: 800; color: var(--plum-soft); }
+.deleted-left.is-soon { color: var(--burgundy); }
+.restore-btn { flex: 0 0 auto; white-space: nowrap; }
+
+/* —— Confirm dialog —— */
+#confirm-modal { z-index: 250; }
+.modal-confirm { max-width: 400px; }
+.confirm-title { margin: 0 0 0.5rem; font-family: var(--font-display); font-size: 1.25rem; line-height: 1.25; overflow-wrap: anywhere; }
+.confirm-message { margin: 0; font-size: 1rem; color: var(--plum-soft); }
+.confirm-foot { flex-wrap: wrap; justify-content: flex-end; }
+.confirm-foot .btn { flex: 1 1 auto; }
+
+/* —— Tap targets: at least 44px tall —— */
+.admin-page .btn-sm,
+.admin-toolbar-actions .btn,
+.view-tab,
+.card-step,
+.card-stage,
+.modal-close,
+.quick-btn,
+.jump-chip,
+.summary-card { min-height: 44px; }
+.card-step, .card-stage { height: auto; }
+.card-step { min-width: 44px; }
+.modal-close { min-width: 44px; }
+
+@media (max-width: 720px) {
+  .order-list, .week-cards { grid-template-columns: minmax(0, 1fr); }
+  .order-card { min-width: 0; }
+  #confirm-modal { align-items: center; padding: 1rem; }
+  #confirm-modal .modal { height: auto; border-radius: var(--radius); }
+  .deleted-list { grid-template-columns: 1fr; }
+}

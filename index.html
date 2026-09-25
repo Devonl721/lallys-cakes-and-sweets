@@ -3,22 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lally's Cakes &amp; Sweets — Delightful &amp; elegant desserts · EST. 2012</title>
-  <meta name="description" content="Lally's Cakes &amp; Sweets — delightful and elegant party desserts, custom cakes, and 100+ flavors. Family bakery at Shillington Farmers Market since 2012." />
+  <title>Lally's Cakes &amp; Sweets | Bakery at Shillington Farmers Market, Shillington PA</title>
+  <meta name="description" content="Bakery stand at Shillington Farmers Market, 10 S Summit Ave, Shillington PA. Cupcakes, cakes, cookies and party desserts in over 100 flavors, since 2012." />
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Nunito:wght@400;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <!-- priceRange is intentionally left out of this structured data until Devon confirms it. -->
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Bakery","name":"Lally's Cakes & Sweets","address":{"@type":"PostalAddress","streetAddress":"10 S Summit Ave","addressLocality":"Shillington","addressRegion":"PA","postalCode":"19607","addressCountry":"US"},"telephone":"+1-484-219-0445","url":"https://lallyscakesandsweets.com/","sameAs":["https://www.facebook.com/LallysCakesandSweets/"],"foundingDate":"2012","openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Thursday","Friday"],"opens":"10:00","closes":"16:00"},{"@type":"OpeningHoursSpecification","dayOfWeek":"Saturday","opens":"10:00","closes":"14:00"}]}
+  </script>
 </head>
-<body>
+<body class="has-action-bar">
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header">
     <div class="nav-inner">
       <a class="logo" href="index.html">
-        <img class="logo-img" src="logo.png" width="52" height="52" alt="Lally's Cakes &amp; Sweets logo" />
+        <picture><source srcset="logo.webp" type="image/webp" /><img class="logo-img" src="logo.png" width="52" height="52" alt="Lally's Cakes &amp; Sweets logo" /></picture>
         <span class="logo-text">
           <span class="logo-script">Lally’s</span>
           <span class="logo-sub">Cakes &amp; Sweets</span>
@@ -37,15 +41,25 @@
   <main id="main">
     <section class="hero">
       <div class="wrap hero-grid">
-        <div>
-          <span class="eyebrow">Family bakery · Shillington Farmers Market · EST. 2012</span>
+        <div class="hero-copy">
+          <span class="eyebrow">Bakery · Shillington Farmers Market · EST. 2012</span>
           <h1>Lally’s Cakes <span class="amp">&amp;</span> Sweets</h1>
-          <p class="hero-tagline">Delightful and elegant desserts for every celebration. Experienced bakers ready for your party specialties — with <strong>over 100 flavors</strong> to choose from.</p>
+          <div class="visit-card" id="visit">
+            <h2 class="visit-title">Visit our stand at Shillington Farmers Market.</h2>
+            <p class="visit-address"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg><span>10 S Summit Ave, Shillington, PA 19607.</span></p>
+            <p class="visit-hours"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 10.4 3.2 1.9-.8 1.3L11 13V7h2z"/></svg><span>Open Thu &amp; Fri 10&nbsp;AM – 4&nbsp;PM · Sat 10&nbsp;AM – 2&nbsp;PM</span></p>
+            <div class="visit-actions">
+              <a class="btn btn-primary" href="https://www.google.com/maps/dir/?api=1&amp;destination=Shillington+Farmers+Market,+10+S+Summit+Ave,+Shillington,+PA+19607" target="_blank" rel="noopener noreferrer">Get directions</a>
+              <a class="btn btn-secondary" href="tel:+14842190445">Call (484) 219-0445</a>
+            </div>
+            <p class="visit-note">Over 100 flavors, baking since 2012. Hours change with the seasons, so check our <a href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">Facebook</a> for this week's updates.</p>
+          </div>
+          <p class="hero-tagline">Delightful and elegant desserts for every celebration, including party specialties, with <strong>over 100 flavors</strong> to choose from.</p>
           <div class="stat-pills">
             <span class="stat-pill">EST. 2012</span>
             <span class="stat-pill">100+ flavors</span>
             <span class="stat-pill">Party specialties</span>
-            <span class="stat-pill">$$ · keep it enjoyable</span>
+            <span class="stat-pill">Find us at Shillington Farmers Market</span>
           </div>
           <div class="btn-row">
             <a class="btn btn-primary" href="contact.html">Order / Inquire</a>
@@ -55,7 +69,7 @@
         </div>
         <aside class="hero-card" aria-label="Brand highlight">
           <div class="hero-card-visual">
-            <img class="hero-logo" src="logo.png" width="200" height="200" alt="Lally's Cakes &amp; Sweets circular logo with cupcake and strawberry" />
+            <picture><source srcset="logo.webp" type="image/webp" /><img class="hero-logo" src="logo.png" width="200" height="200" alt="Lally's Cakes &amp; Sweets circular logo with cupcake and strawberry" /></picture>
           </div>
           <h2>Custom cakes, made for you</h2>
           <p>Tell us about your event — we’ll help design a cake, cupcakes, or party tray that feels personal and tastes homemade.</p>
@@ -63,36 +77,44 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section stand-section">
       <div class="wrap">
-        <span class="eyebrow">Favorites</span>
-        <h2 class="section-title">What we love to bake</h2>
-        <p class="section-lead">Party dessert specialties, custom cakes, and sweets for every guest list. Ask for a quote — we keep pricing approachable so everyone can enjoy something sweet.</p>
-        <div class="card-grid">
-          <article class="card">
-            <div class="card-media tone-a" aria-hidden="true">🧁</div>
-            <div class="card-body">
-              <h3>Celebration cupcakes</h3>
-              <p>Soft cakes with beautiful buttercream — perfect for parties, trays, and offices. Pick from our huge flavor lineup.</p>
-              <span class="price-tag">Ask for quote</span>
-            </div>
-          </article>
-          <article class="card">
-            <div class="card-media tone-b" aria-hidden="true">🎂</div>
-            <div class="card-body">
-              <h3>Custom cakes</h3>
-              <p>Elegant birthday and celebration cakes sized and flavored for your guest of honor.</p>
-              <span class="price-tag">Custom · inquire</span>
-            </div>
-          </article>
-          <article class="card">
-            <div class="card-media tone-c" aria-hidden="true">🍪</div>
-            <div class="card-body">
-              <h3>Cookies &amp; party trays</h3>
-              <p>Assorted cookies, sweets, and party dessert trays for showers, holidays, and gatherings.</p>
-              <span class="price-tag">Ask for quote</span>
-            </div>
-          </article>
+        <span class="eyebrow">At the market</span>
+        <h2 class="section-title">Stop by the stand</h2>
+        <p class="section-lead stand-lead">On a typical market day you'll find scones, cupcakes, cookies, brownies and weekly seasonal specials. Flavors rotate, and there are over 100 of them. We post each week's specials on <a href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">Facebook</a>. Party or birthday order? Ask us at the stand or call <a href="tel:+14842190445">(484) 219-0445</a>.</p>
+        <div class="photo-grid">
+          <figure class="photo-slot">
+            <picture>
+              <source srcset="images/a-celebration-cake.webp" type="image/webp" />
+              <img src="images/a-celebration-cake.jpg" width="900" height="1200" loading="lazy" decoding="async" alt="Round red cake decorated with gold braided trim, sitting in an open bakery box" />
+            </picture>
+            <figcaption class="photo-slot-caption">Custom celebration cakes</figcaption>
+          </figure>
+          <figure class="photo-slot">
+            <picture>
+              <source srcset="images/b-cupcakes.webp" type="image/webp" />
+              <img src="images/b-cupcakes.jpg" width="1200" height="900" loading="lazy" decoding="async" alt="Tray of chocolate cupcakes topped with swirls of white frosting and cookie crumbs" />
+            </picture>
+            <figcaption class="photo-slot-caption">Cupcakes, fresh every market day</figcaption>
+          </figure>
+          <figure class="photo-slot">
+            <picture>
+              <source srcset="images/c-dumplings.webp" type="image/webp" />
+              <img src="images/c-dumplings.jpg" width="1079" height="1093" loading="lazy" decoding="async" alt="Close-up of golden baked fruit dumplings wrapped in pastry" />
+            </picture>
+            <figcaption class="photo-slot-caption">Weekly seasonal specials</figcaption>
+          </figure>
+          <figure class="photo-slot">
+            <picture>
+              <source srcset="images/d-scones.webp" type="image/webp" />
+              <img src="images/d-scones.jpg" width="1000" height="750" loading="lazy" decoding="async" alt="Trays of labeled scones in the bakery case at the market stand" />
+            </picture>
+            <figcaption class="photo-slot-caption">Scones in rotating flavors</figcaption>
+          </figure>
+        </div>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="menu.html">See the menu</a>
+          <a class="btn btn-secondary" href="contact.html">Party or birthday order</a>
         </div>
       </div>
     </section>
@@ -104,7 +126,7 @@
         <div class="btn-row" style="justify-content:center;">
           <a class="btn btn-primary" href="tel:+14842190445">Call (484) 219-0445</a>
           <a class="btn btn-secondary" href="mailto:lallyscakesandsweets@gmail.com">Email us</a>
-          <a class="btn btn-facebook" href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">Message on Facebook</a>
+          <a class="btn btn-facebook" href="https://m.me/LallysCakesandSweets" target="_blank" rel="noopener noreferrer">Message on Facebook</a>
         </div>
       </div>
     </section>
@@ -113,7 +135,7 @@
       <div class="wrap">
         <span class="eyebrow">Why us</span>
         <h2 class="section-title">Delightful &amp; elegant since 2012</h2>
-        <p class="section-lead">We’re a family bakery at Shillington Farmers Market focused on party dessert specialties, custom cakes, and flavors that make every event feel special.</p>
+        <p class="section-lead">We’re a bakery at Shillington Farmers Market, baking since 2012 and focused on party dessert specialties, custom cakes, and flavors that make every event feel special.</p>
         <div class="card-grid">
           <article class="card">
             <div class="card-body">
@@ -130,7 +152,7 @@
           <article class="card">
             <div class="card-body">
               <h3>Local &amp; welcoming</h3>
-              <p>Find us at Shillington Farmers Market. $$ pricing keeps sweets enjoyable for everyone.</p>
+              <p>Find us at Shillington Farmers Market in Shillington, PA.</p>
             </div>
           </article>
         </div>
@@ -145,7 +167,7 @@
     <div class="footer-inner">
       <div class="footer-brand">
         <div class="logo">
-          <img class="logo-img" src="logo.png" width="44" height="44" alt="" />
+          <picture><source srcset="logo.webp" type="image/webp" /><img class="logo-img" src="logo.png" width="44" height="44" alt="" /></picture>
           <span class="logo-text">
             <span class="logo-script">Lally’s</span>
             <span class="logo-sub">Cakes &amp; Sweets</span>
@@ -168,13 +190,17 @@
           <li><a href="tel:+14842190445">(484) 219-0445</a></li>
           <li><a href="mailto:lallyscakesandsweets@gmail.com">lallyscakesandsweets@gmail.com</a></li>
           <li>10 S Summit Ave (Shillington Farmers Market), Shillington, PA 19607</li>
-          <li>Summer hours (from Facebook): Thu 10 AM – 4 PM</li>
-          <li>Other days by appointment · check Facebook</li>
+          <li>Open Thu &amp; Fri 10&nbsp;AM – 4&nbsp;PM · Sat 10&nbsp;AM – 2&nbsp;PM</li>
         </ul>
       </div>
     </div>
-    <div class="footer-bottom">© 2026 Lally's Cakes &amp; Sweets · EST. 2012 · <span class="footer-owner-link"><a href="admin.html">Owner login</a></span></div>
+    <div class="footer-bottom">© 2026 Lally's Cakes &amp; Sweets · EST. 2012</div>
   </footer>
+
+  <nav class="mobile-action-bar" aria-label="Quick actions">
+    <a class="mobile-action mobile-action-call" href="tel:+14842190445"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg>Call</a>
+    <a class="mobile-action mobile-action-directions" href="https://www.google.com/maps/dir/?api=1&amp;destination=Shillington+Farmers+Market,+10+S+Summit+Ave,+Shillington,+PA+19607" target="_blank" rel="noopener noreferrer"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Directions</a>
+  </nav>
 
   <script src="script.js"></script>
 </body>

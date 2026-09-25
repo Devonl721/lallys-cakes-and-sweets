@@ -3,22 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Contact — Lally's Cakes &amp; Sweets</title>
-  <meta name="description" content="Contact Lally's Cakes &amp; Sweets at Shillington Farmers Market. Call (484) 219-0445, email lallyscakesandsweets@gmail.com, or message on Facebook. Summer Thursday hours 10 AM – 4 PM." />
+  <title>Contact | Lally's Cakes &amp; Sweets, Shillington PA</title>
+  <meta name="description" content="Contact Lally's Cakes &amp; Sweets at Shillington Farmers Market. Call (484) 219-0445, email lallyscakesandsweets@gmail.com, or message on Facebook." />
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Nunito:wght@400;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <!-- priceRange is intentionally left out of this structured data until Devon confirms it. -->
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Bakery","name":"Lally's Cakes & Sweets","address":{"@type":"PostalAddress","streetAddress":"10 S Summit Ave","addressLocality":"Shillington","addressRegion":"PA","postalCode":"19607","addressCountry":"US"},"telephone":"+1-484-219-0445","url":"https://lallyscakesandsweets.com/","sameAs":["https://www.facebook.com/LallysCakesandSweets/"],"foundingDate":"2012","openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Thursday","Friday"],"opens":"10:00","closes":"16:00"},{"@type":"OpeningHoursSpecification","dayOfWeek":"Saturday","opens":"10:00","closes":"14:00"}]}
+  </script>
 </head>
-<body>
+<body class="has-action-bar">
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header">
     <div class="nav-inner">
       <a class="logo" href="index.html">
-        <img class="logo-img" src="logo.png" width="52" height="52" alt="Lally's Cakes &amp; Sweets logo" />
+        <picture><source srcset="logo.webp" type="image/webp" /><img class="logo-img" src="logo.png" width="52" height="52" alt="Lally's Cakes &amp; Sweets logo" /></picture>
         <span class="logo-text">
           <span class="logo-script">Lally’s</span>
           <span class="logo-sub">Cakes &amp; Sweets</span>
@@ -39,7 +43,7 @@
       <div class="wrap">
         <span class="eyebrow">Say hello</span>
         <h1>Order / Inquire</h1>
-        <p>Send us a note with the form below — it goes straight to <strong>devonl721@icloud.com</strong> <em>(temporary test inbox)</em>. Or call, email, or message us on Facebook.</p>
+        <p>Send us a note with the form below, or call, email, or message us on Facebook.</p>
       </div>
     </div>
 
@@ -49,12 +53,13 @@
           <div class="contact-ctas">
             <a class="btn btn-primary" href="tel:+14842190445">Call (484) 219-0445</a>
             <a class="btn btn-secondary" href="mailto:lallyscakesandsweets@gmail.com">Email us</a>
-            <a class="btn btn-facebook" href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">Message on Facebook</a>
+            <a class="btn btn-facebook" href="https://m.me/LallysCakesandSweets" target="_blank" rel="noopener noreferrer">Message on Facebook</a>
+            <a class="btn btn-secondary" href="https://www.google.com/maps/dir/?api=1&amp;destination=Shillington+Farmers+Market,+10+S+Summit+Ave,+Shillington,+PA+19607" target="_blank" rel="noopener noreferrer">Get directions</a>
           </div>
 
           <div id="form-success" class="form-success" role="status" aria-live="polite"></div>
-          <p class="form-hint">Fill this out and we’ll get your inquiry at <a href="mailto:devonl721@icloud.com">devonl721@icloud.com</a> <em>(temporary test — switch back after)</em>. Prefer to reach out yourself? Use Call, Email, or Facebook above.</p>
-          <form id="inquire-form" action="https://formsubmit.co/ajax/devonl721@icloud.com" method="POST" novalidate>
+          <p class="form-hint">Fill this out and we’ll get back to you about your order. Prefer to reach out yourself? Use Call, Email, or Facebook above.</p>
+          <form id="inquire-form" action="https://formsubmit.co/ajax/lallyscakesandsweets@gmail.com" method="POST" novalidate>
             <input type="hidden" name="_subject" value="New inquiry — Lally's Cakes &amp; Sweets" />
             <input type="hidden" name="_template" value="box" />
             <input type="hidden" name="_captcha" value="false" />
@@ -80,12 +85,45 @@
               <label for="message">Message</label>
               <textarea id="message" name="Message" required placeholder="Tell us about the cake or sweets you’d like, guest count, flavors, and any must-haves…"></textarea>
             </div>
+            <fieldset class="form-optional">
+              <legend>Order details <span class="form-optional-tag">(optional)</span></legend>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="servings">Number of servings</label>
+                  <input type="number" id="servings" name="Number of servings" min="1" step="1" inputmode="numeric" placeholder="e.g. 24" />
+                </div>
+                <div class="form-group">
+                  <label for="flavors">Flavors</label>
+                  <input type="text" id="flavors" name="Flavors" placeholder="Cake, filling, frosting…" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="design-link">Design photo link</label>
+                <input type="url" id="design-link" name="Design photo link" inputmode="url" placeholder="https://… (Pinterest, Google Photos, Facebook, etc.)" />
+                <p class="form-field-hint">Paste a link to an inspiration photo. You can also send photos by Facebook Message.</p>
+              </div>
+              <div class="form-group">
+                <label for="dietary">Dietary needs / allergies</label>
+                <input type="text" id="dietary" name="Dietary needs / allergies" placeholder="e.g. nut allergy, dairy-free" />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pickup-date">Preferred pickup date</label>
+                  <input type="date" id="pickup-date" name="Preferred pickup date" />
+                </div>
+                <div class="form-group">
+                  <label for="pickup-time">Preferred pickup time</label>
+                  <input type="time" id="pickup-time" name="Preferred pickup time" />
+                </div>
+              </div>
+            </fieldset>
+            <p class="form-inquiry-note">This is an inquiry, not a confirmed order. We'll get back to you to confirm details and pricing.</p>
             <button type="submit" class="btn btn-primary">Send inquiry</button>
           </form>
         </div>
 
         <aside class="info-card">
-          <h3>Visit &amp; reach us</h3>
+          <h2 class="info-card-title">Visit &amp; reach us</h2>
           <ul class="info-list">
             <li>
               <strong>Phone</strong>
@@ -108,19 +146,19 @@
             </li>
             <li>
               <strong>Hours</strong>
-              <em>Seasonal / from Facebook cover:</em><br />
-              Summer — Thursday 10 AM – 4 PM<br />
-              <span style="display:block;font-size:0.85rem;color:var(--muted);margin-top:0.25rem;">Other days by appointment. Check Facebook for current hours.</span>
+              Open Thu &amp; Fri 10&nbsp;AM – 4&nbsp;PM · Sat 10&nbsp;AM – 2&nbsp;PM<br />
+              <span style="display:block;font-size:0.85rem;color:var(--muted);margin-top:0.25rem;">Check Facebook for current hours.</span>
             </li>
           </ul>
 
-          <div class="map-placeholder" role="img" aria-label="Location: 10 S Summit Ave (Shillington Farmers Market), Shillington, PA 19607">
+          <a class="map-placeholder map-link" href="https://www.google.com/maps/dir/?api=1&amp;destination=Shillington+Farmers+Market,+10+S+Summit+Ave,+Shillington,+PA+19607" target="_blank" rel="noopener noreferrer" aria-label="Get directions to Shillington Farmers Market, 10 S Summit Ave, Shillington, PA 19607 (opens Google Maps in a new tab)">
             <span aria-hidden="true">📍</span>
             10 S Summit Ave<br />
             Shillington Farmers Market<br />
             Shillington, PA 19607<br />
             <small>Shillington Farmers Market · Berks County</small>
-          </div>
+            <span class="map-link-cta">Get directions →</span>
+          </a>
         </aside>
       </div>
     </section>
@@ -130,7 +168,7 @@
     <div class="footer-inner">
       <div class="footer-brand">
         <div class="logo">
-          <img class="logo-img" src="logo.png" width="44" height="44" alt="" />
+          <picture><source srcset="logo.webp" type="image/webp" /><img class="logo-img" src="logo.png" width="44" height="44" alt="" /></picture>
           <span class="logo-text">
             <span class="logo-script">Lally’s</span>
             <span class="logo-sub">Cakes &amp; Sweets</span>
@@ -153,13 +191,17 @@
           <li><a href="tel:+14842190445">(484) 219-0445</a></li>
           <li><a href="mailto:lallyscakesandsweets@gmail.com">lallyscakesandsweets@gmail.com</a></li>
           <li>10 S Summit Ave (Shillington Farmers Market), Shillington, PA 19607</li>
-          <li>Summer hours (from Facebook): Thu 10 AM – 4 PM</li>
-          <li>Other days by appointment · check Facebook</li>
+          <li>Open Thu &amp; Fri 10&nbsp;AM – 4&nbsp;PM · Sat 10&nbsp;AM – 2&nbsp;PM</li>
         </ul>
       </div>
     </div>
-    <div class="footer-bottom">© 2026 Lally's Cakes &amp; Sweets · EST. 2012 · <span class="footer-owner-link"><a href="admin.html">Owner login</a></span></div>
+    <div class="footer-bottom">© 2026 Lally's Cakes &amp; Sweets · EST. 2012</div>
   </footer>
+
+  <nav class="mobile-action-bar" aria-label="Quick actions">
+    <a class="mobile-action mobile-action-call" href="tel:+14842190445"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg>Call</a>
+    <a class="mobile-action mobile-action-directions" href="https://www.google.com/maps/dir/?api=1&amp;destination=Shillington+Farmers+Market,+10+S+Summit+Ave,+Shillington,+PA+19607" target="_blank" rel="noopener noreferrer"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Directions</a>
+  </nav>
 
   <script src="script.js"></script>
 </body>

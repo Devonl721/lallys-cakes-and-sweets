@@ -51,7 +51,9 @@
       email: fields.email,
       phone: fields.phone || null,
       event_date: fields.eventDate || null,
-      message: fields.message
+      // Optional order details are appended to the message text as labeled lines
+      // (no extra columns, so the public insert and its trigger keep working).
+      message: fields.dbMessage || fields.message
     };
     return fetch(SUPABASE_URL + "/rest/v1/inquiries", {
       method: "POST",
@@ -85,11 +87,43 @@
       var eventDate = (form.querySelector("#event-date") || {}).value || "";
       var message = (form.querySelector("#message") || {}).value || "";
 
+      // Optional order details (label → value); only filled-in ones are sent
+      var OPTIONAL_FIELDS = [
+        ["#servings", "Number of servings"],
+        ["#flavors", "Flavors"],
+        ["#design-link", "Design photo link"],
+        ["#dietary", "Dietary needs / allergies"],
+        ["#pickup-date", "Preferred pickup date"],
+        ["#pickup-time", "Preferred pickup time"]
+      ];
+      var extras = [];
+      OPTIONAL_FIELDS.forEach(function (f) {
+        var input = form.querySelector(f[0]);
+        var v = input ? String(input.value || "").trim() : "";
+        if (v) extras.push({ label: f[1], value: v });
+      });
+
       if (!name.trim() || !email.trim() || !message.trim()) {
         if (success) {
           success.classList.add("is-visible");
           success.textContent =
             "Please fill in your name, email, and message so we can reply.";
+        }
+        return;
+      }
+
+      var designInput = form.querySelector("#design-link");
+      var servingsInput = form.querySelector("#servings");
+      if (
+        (designInput && designInput.value.trim() && !designInput.checkValidity()) ||
+        (servingsInput && servingsInput.value && !servingsInput.checkValidity())
+      ) {
+        if (success) {
+          success.classList.add("is-visible");
+          success.textContent =
+            designInput && designInput.value.trim() && !designInput.checkValidity()
+              ? "Please check the design photo link. It should start with https://"
+              : "Please enter the number of servings as a whole number.";
         }
         return;
       }
@@ -110,6 +144,11 @@
         eventDate: eventDate,
         message: message.trim()
       };
+      trimmed.dbMessage = extras.length
+        ? trimmed.message +
+          "\n\n--- Order details (from inquiry form) ---\n" +
+          extras.map(function (x) { return x.label + ": " + x.value; }).join("\n")
+        : trimmed.message;
 
       var payload = {
         Name: trimmed.name,
@@ -124,9 +163,12 @@
         _replyto: trimmed.email,
         _cc: "6108589208@tmomail.net"
       };
+      extras.forEach(function (x) {
+        payload[x.label] = x.value;
+      });
 
       var emailPromise = fetch(
-        "https://formsubmit.co/ajax/devonl721@icloud.com",
+        "https://formsubmit.co/ajax/lallyscakesandsweets@gmail.com",
         {
           method: "POST",
           headers: {

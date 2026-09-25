@@ -5,3 +5,4 @@ preview-*.png
 .DS_Store
 supabase-config.json
 supabase/
+images/originals/

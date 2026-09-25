@@ -198,7 +198,7 @@
       var p = el("p", "menu-note");
       p.innerHTML =
         'Sorry, our menu didn’t load. Please call <a href="tel:+14842190445">(484) 219-0445</a> or ' +
-        '<a href="https://www.facebook.com/LallysCakesandSweets/" target="_blank" rel="noopener noreferrer">message us on Facebook</a> for today’s treats and prices.';
+        '<a href="https://m.me/LallysCakesandSweets" target="_blank" rel="noopener noreferrer">message us on Facebook</a> for today’s treats and prices.';
       root.appendChild(p);
     });
 })();

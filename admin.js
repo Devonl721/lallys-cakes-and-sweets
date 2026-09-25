@@ -1,4 +1,6 @@
-/* Lally's Cakes & Sweets — owner inbox (password auth + magic-link fallback) */
+/* Lally's Cakes & Sweets — owner order board
+ * Plain JS, no build step. Talks to Supabase REST (PostgREST) + Auth.
+ * Access is enforced server-side by RLS (owner emails only). */
 (function () {
   "use strict";
 
@@ -11,912 +13,1077 @@
     "devonl721@icloud.com"
   ];
   var SESSION_KEY = "lallys_admin_session";
+  var PREFS_KEY = "lallys_admin_prefs";
+  var TZ = "America/New_York";
 
-  var loginView = document.getElementById("admin-login");
-  var inboxView = document.getElementById("admin-inbox");
-  var loginForm = document.getElementById("login-form");
-  var loginStatus = document.getElementById("login-status");
-  var inboxStatus = document.getElementById("inbox-status");
-  var inquiryList = document.getElementById("inquiry-list");
-  var signedInEmail = document.getElementById("signed-in-email");
-  var signOutBtn = document.getElementById("sign-out-btn");
+  /* ---------------- Stages ---------------- */
+  var STAGES = [
+    { key: "new", label: "New", short: "New" },
+    { key: "contacted", label: "Contacted / Quoted", short: "Quoted" },
+    { key: "confirmed", label: "Confirmed", short: "Confirmed" },
+    { key: "baking", label: "Baking", short: "Baking" },
+    { key: "ready", label: "Ready for pickup", short: "Ready" },
+    { key: "completed", label: "Picked up", short: "Picked up" },
+    { key: "declined", label: "Declined", short: "Declined", closed: true },
+    { key: "archived", label: "Archived", short: "Archived", closed: true }
+  ];
+  var FLOW = ["new", "contacted", "confirmed", "baking", "ready", "completed"];
+  var OPEN_STAGES = ["new", "contacted", "confirmed", "baking", "ready"];
+  var DEPOSIT_STAGES = ["confirmed", "baking", "ready"];
+  var LEGACY_TO_NEW = { replied: "contacted", booked: "confirmed" };
+  // When the DB hasn't been migrated yet, only these stages can be saved.
+  var NEW_TO_LEGACY = { new: "new", contacted: "replied", confirmed: "booked", archived: "archived" };
+  var SOURCES = { website: "Website", phone: "Phone", facebook: "Facebook", in_person: "In person", other: "Other" };
+  var NEW_COLUMNS = ["event_type", "pickup_date", "pickup_time", "items", "price", "deposit_paid",
+    "deposit_amount", "paid_in_full", "priority", "source", "updated_at"];
 
-  var magicLinkPanel = document.getElementById("magic-link-panel");
-  var createPasswordPanel = document.getElementById("create-password-panel");
-  var forgotPasswordPanel = document.getElementById("forgot-password-panel");
-  var magicLinkForm = document.getElementById("magic-link-form");
-  var createPasswordForm = document.getElementById("create-password-form");
-  var forgotPasswordForm = document.getElementById("forgot-password-form");
-  var toggleMagicLink = document.getElementById("toggle-magic-link");
-  var toggleCreatePassword = document.getElementById("toggle-create-password");
-  var toggleForgotPassword = document.getElementById("toggle-forgot-password");
-
-  function anonHeaders() {
-    return {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    };
+  function stage(key) {
+    for (var i = 0; i < STAGES.length; i++) if (STAGES[i].key === key) return STAGES[i];
+    return { key: key, label: key, short: key };
   }
 
-  function userHeaders(accessToken) {
-    return {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + accessToken,
-      "Content-Type": "application/json"
-    };
-  }
+  /* ---------------- State ---------------- */
+  var state = {
+    session: null,
+    rows: [],
+    legacy: false, // true when migration 002 hasn't been applied
+    view: "board",
+    showClosed: false,
+    listFilter: "active",
+    listSort: "pickup",
+    search: "",
+    editingId: null // null = closed, "new" = creating
+  };
 
-  function getSession() {
-    try {
-      var raw = localStorage.getItem(SESSION_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
+  /* ---------------- DOM ---------------- */
+  function $(id) { return document.getElementById(id); }
+  var authWrap = $("admin-auth"), appWrap = $("admin-app"), hero = $("admin-hero");
+  var loginStatus = $("login-status"), appStatus = $("app-status");
+  var signinPanel = $("signin-panel"), resetPanel = $("reset-panel");
+  var forgotPanel = $("forgot-password-panel"), toggleForgot = $("toggle-forgot-password");
+  var modal = $("order-modal"), orderForm = $("order-form");
+  var toastEl = $("toast");
+
+  /** Small DOM builder. Strings become text nodes (safe for customer input). */
+  function h(tag, props) {
+    var node = document.createElement(tag);
+    if (props) {
+      Object.keys(props).forEach(function (k) {
+        var v = props[k];
+        if (v === null || v === undefined || v === false) return;
+        if (k === "class") node.className = v;
+        else if (k === "text") node.textContent = v;
+        else if (k.slice(0, 2) === "on") node.addEventListener(k.slice(2), v);
+        else if (k === "dataset") Object.keys(v).forEach(function (d) { node.dataset[d] = v[d]; });
+        else node.setAttribute(k, v === true ? "" : v);
+      });
     }
+    for (var i = 2; i < arguments.length; i++) append(node, arguments[i]);
+    return node;
   }
-
-  function saveSession(session) {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  function append(node, child) {
+    if (child === null || child === undefined || child === false) return;
+    if (Array.isArray(child)) { child.forEach(function (c) { append(node, c); }); return; }
+    node.appendChild(typeof child === "string" || typeof child === "number"
+      ? document.createTextNode(String(child)) : child);
   }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 
-  function clearSession() {
-    localStorage.removeItem(SESSION_KEY);
+  /* ---------------- Toast / alerts ---------------- */
+  var toastTimer = null;
+  function toast(msg, kind) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.className = "toast is-visible" + (kind === "error" ? " toast-error" : " toast-ok");
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toastEl.classList.remove("is-visible");
+      setTimeout(function () { toastEl.hidden = true; }, 250);
+    }, kind === "error" ? 5000 : 2200);
   }
-
-  function parseHashSession() {
-    var hash = window.location.hash.replace(/^#/, "");
-    if (!hash) return null;
-    var params = new URLSearchParams(hash);
-    var accessToken = params.get("access_token");
-    var refreshToken = params.get("refresh_token");
-    if (!accessToken) return null;
-    var expiresIn = parseInt(params.get("expires_in") || "3600", 10);
-    return {
-      access_token: accessToken,
-      refresh_token: refreshToken || "",
-      expires_at: Date.now() + expiresIn * 1000,
-      user: null
-    };
+  function setAlert(el, msg, kind) {
+    if (!el) return;
+    if (!msg) { el.className = "admin-alert"; clear(el); return; }
+    el.className = "admin-alert is-visible" + (kind ? " admin-alert-" + kind : "");
+    clear(el);
+    append(el, msg);
   }
-
-  function decodeJwtEmail(token) {
-    try {
-      var payload = token.split(".")[1];
-      var json = JSON.parse(
-        atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-      );
-      return json.email || (json.user_metadata && json.user_metadata.email) || "";
-    } catch (e) {
-      return "";
-    }
-  }
-
-  function isOwnerEmail(email) {
-    if (!email) return false;
-    var lower = email.toLowerCase();
-    return OWNERS.some(function (o) {
-      return o.toLowerCase() === lower;
-    });
-  }
-
-  function adminRedirectUrl() {
-    var redirectTo =
-      window.location.origin +
-      window.location.pathname.replace(/[^/]+$/, "admin.html");
-    if (!/admin\.html$/i.test(redirectTo)) {
-      redirectTo = window.location.origin + "/admin.html";
-    }
-    return redirectTo;
-  }
-
-  function clearHash() {
-    history.replaceState(
-      null,
-      "",
-      window.location.pathname + window.location.search
-    );
-  }
-
   function setLoginStatus(message, isError) {
     if (!loginStatus) return;
-    if (!message) {
-      loginStatus.classList.remove("is-visible", "is-error");
-      loginStatus.textContent = "";
-      return;
-    }
+    if (!message) { loginStatus.classList.remove("is-visible", "is-error"); loginStatus.textContent = ""; return; }
     loginStatus.classList.add("is-visible");
     loginStatus.classList.toggle("is-error", !!isError);
     loginStatus.textContent = message;
   }
 
-  function friendlyAuthError(data, fallback) {
-    var raw =
-      (data &&
-        (data.error_description ||
-          data.msg ||
-          data.error ||
-          data.message)) ||
-      "";
-    var lower = String(raw).toLowerCase();
-    if (
-      lower.indexOf("invalid login") !== -1 ||
-      lower.indexOf("invalid_grant") !== -1 ||
-      lower.indexOf("invalid credentials") !== -1
-    ) {
-      return "Invalid email or password. Try again, or create a password / use a magic link.";
-    }
-    if (
-      lower.indexOf("email not confirmed") !== -1 ||
-      lower.indexOf("not confirmed") !== -1
-    ) {
-      return "Please confirm your email first (check your inbox), then sign in.";
-    }
-    if (
-      lower.indexOf("already registered") !== -1 ||
-      lower.indexOf("already been registered") !== -1 ||
-      lower.indexOf("user already") !== -1
-    ) {
-      return "That email already has an account. Sign in, or use Forgot password if you need a reset.";
-    }
-    if (lower.indexOf("rate limit") !== -1 || lower.indexOf("email rate") !== -1) {
-      return "Too many login emails were sent recently. Wait about an hour, then use Sign in with email + password (that does not send email). Avoid magic link / create password / forgot until then.";
-    }
-    if (lower.indexOf("password") !== -1 && lower.indexOf("weak") !== -1) {
-      return "Please choose a stronger password (at least 6 characters).";
-    }
-    if (raw) return raw;
-    return fallback || "Something went wrong. Try again.";
+  /* ---------------- Session / auth ---------------- */
+  function anonHeaders() {
+    return { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" };
   }
+  function userHeaders(token) {
+    return { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + token, "Content-Type": "application/json" };
+  }
+  function getSession() {
+    try { var raw = localStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function saveSession(s) { state.session = s; try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (e) {} }
+  function clearSession() { state.session = null; try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
 
-  function sessionFromTokenResponse(data) {
-    var email =
-      (data.user && data.user.email) ||
-      decodeJwtEmail(data.access_token) ||
-      "";
+  function decodeJwtEmail(token) {
+    try {
+      var p = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (p.length % 4) p += "=";
+      var json = JSON.parse(atob(p));
+      return json.email || (json.user_metadata && json.user_metadata.email) || "";
+    } catch (e) { return ""; }
+  }
+  function isOwnerEmail(email) {
+    var lower = String(email || "").toLowerCase();
+    return OWNERS.some(function (o) { return o === lower; });
+  }
+  function adminRedirectUrl() {
+    var url = window.location.origin + window.location.pathname.replace(/[^/]*$/, "admin.html");
+    if (!/admin\.html$/i.test(url)) url = window.location.origin + "/admin.html";
+    return url;
+  }
+  function clearHash() { history.replaceState(null, "", window.location.pathname + window.location.search); }
+
+  function sessionFromTokenResponse(data, fallbackEmail) {
     return {
       access_token: data.access_token,
       refresh_token: data.refresh_token || "",
       expires_at: Date.now() + (data.expires_in || 3600) * 1000,
-      user: { email: email }
+      user: { email: (data.user && data.user.email) || decodeJwtEmail(data.access_token) || fallbackEmail || "" }
     };
   }
 
-  function refreshSession(session) {
-    if (!session || !session.refresh_token) {
-      return Promise.reject(new Error("No refresh token"));
-    }
-    return fetch(
-      SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token",
-      {
-        method: "POST",
-        headers: anonHeaders(),
-        body: JSON.stringify({ refresh_token: session.refresh_token })
-      }
-    ).then(function (res) {
-      return res.json().then(function (data) {
-        if (!res.ok) {
-          throw new Error(
-            (data && data.error_description) ||
-              (data && data.msg) ||
-              "Refresh failed"
-          );
+  function parseJson(res) {
+    return res.text().then(function (t) {
+      var data = null;
+      try { data = t ? JSON.parse(t) : null; } catch (e) { data = { message: t }; }
+      return { ok: res.ok, status: res.status, data: data };
+    });
+  }
+
+  function friendlyAuthError(data, fallback) {
+    var raw = (data && (data.error_description || data.msg || data.error || data.message)) || "";
+    var lower = String(raw).toLowerCase();
+    if (/invalid login|invalid_grant|invalid credentials/.test(lower)) return "Invalid email or password. Try again, or use “Forgot password?”.";
+    if (/not confirmed/.test(lower)) return "Please confirm your email first (check your inbox), then sign in.";
+    if (/rate limit|email rate/.test(lower)) return "Too many emails were sent recently. Wait about an hour before requesting another reset email. Signing in with your password still works.";
+    if (/should be different|same password/.test(lower)) return "Your new password must be different from the old one.";
+    if (/password/.test(lower) && /(weak|short|at least|characters)/.test(lower)) return "Please choose a stronger password (at least 8 characters).";
+    if (/expired|invalid.*(token|jwt)/.test(lower)) return "That link or session has expired. Request a new reset email.";
+    return raw || fallback || "Something went wrong. Try again.";
+  }
+
+  var refreshing = null;
+  function refreshSession() {
+    var s = state.session || getSession();
+    if (!s || !s.refresh_token) return Promise.reject(new Error("No refresh token"));
+    if (refreshing) return refreshing;
+    refreshing = fetch(SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST", headers: anonHeaders(), body: JSON.stringify({ refresh_token: s.refresh_token })
+    }).then(parseJson).then(function (r) {
+      if (!r.ok || !r.data || !r.data.access_token) throw new Error("Refresh failed");
+      var next = sessionFromTokenResponse(r.data, s.user && s.user.email);
+      saveSession(next);
+      return next;
+    }).finally(function () { refreshing = null; });
+    return refreshing;
+  }
+
+  function validSession() {
+    var s = state.session || getSession();
+    if (!s || !s.access_token) return Promise.resolve(null);
+    if (s.expires_at && s.expires_at - 60000 > Date.now()) { state.session = s; return Promise.resolve(s); }
+    return refreshSession().catch(function () { clearSession(); return null; });
+  }
+
+  /** Authenticated REST call. Retries once after refreshing an expired token. */
+  function api(method, path, body, prefer, retried) {
+    return validSession().then(function (s) {
+      if (!s) throw { kind: "auth" };
+      var headers = userHeaders(s.access_token);
+      if (prefer) headers.Prefer = prefer;
+      return fetch(SUPABASE_URL + path, {
+        method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body)
+      }).then(parseJson).then(function (r) {
+        if (r.status === 401 && !retried) {
+          return refreshSession().then(function () { return api(method, path, body, prefer, true); },
+            function () { clearSession(); throw { kind: "auth" }; });
         }
-        var next = sessionFromTokenResponse(data);
-        if (!next.user.email && session.user && session.user.email) {
-          next.user.email = session.user.email;
-        }
-        saveSession(next);
-        return next;
+        if (r.status === 401) throw { kind: "auth" };
+        if (r.status === 403) throw { kind: "forbidden", data: r.data };
+        if (!r.ok) throw { kind: "http", status: r.status, data: r.data };
+        return r.data;
       });
     });
   }
 
-  function ensureSession() {
-    var fromHash = parseHashSession();
-    if (fromHash) {
-      fromHash.user = { email: decodeJwtEmail(fromHash.access_token) };
-      saveSession(fromHash);
-      clearHash();
-      return Promise.resolve(fromHash);
-    }
-
-    var session = getSession();
-    if (!session || !session.access_token) {
-      return Promise.resolve(null);
-    }
-
-    var skew = 60 * 1000;
-    if (session.expires_at && session.expires_at - skew > Date.now()) {
-      if (!session.user || !session.user.email) {
-        session.user = session.user || {};
-        session.user.email = decodeJwtEmail(session.access_token);
-        saveSession(session);
-      }
-      return Promise.resolve(session);
-    }
-
-    return refreshSession(session).catch(function (err) {
-      console.error("Session refresh failed:", err);
+  function isMissingColumnError(err) {
+    var d = err && err.data;
+    if (!d) return false;
+    var msg = String(d.message || "");
+    return d.code === "42703" || d.code === "PGRST204" || /column .* does not exist|could not find the .* column/i.test(msg);
+  }
+  function isStatusCheckError(err) {
+    var d = err && err.data;
+    return !!d && d.code === "23514";
+  }
+  function describeError(err) {
+    if (!err) return "Something went wrong.";
+    if (err.kind === "auth") return "Your session expired. Please sign in again.";
+    if (err.kind === "forbidden") return "Not allowed — owner accounts only.";
+    if (isMissingColumnError(err) || isStatusCheckError(err)) return "The database needs the order-board upgrade (migration 002) before this can be saved.";
+    if (err.kind === "http") return "Save failed (" + err.status + "). Try again.";
+    return "Network problem — check your connection and try again.";
+  }
+  function handleAuthLoss(err) {
+    if (err && err.kind === "auth") {
       clearSession();
-      return null;
-    });
-  }
-
-  function showLogin(message) {
-    if (loginView) loginView.hidden = false;
-    if (inboxView) inboxView.hidden = true;
-    if (message) setLoginStatus(message, false);
-  }
-
-  function showInbox(session) {
-    if (loginView) loginView.hidden = true;
-    if (inboxView) inboxView.hidden = false;
-    var email =
-      (session.user && session.user.email) ||
-      decodeJwtEmail(session.access_token) ||
-      "signed in";
-    if (signedInEmail) signedInEmail.textContent = email;
-
-    if (!isOwnerEmail(email)) {
-      if (inboxStatus) {
-        inboxStatus.className = "admin-alert admin-alert-warn is-visible";
-        inboxStatus.textContent =
-          "This email isn’t an owner account. Only bakery owner emails can view inquiries. Sign out and try an owner address.";
-      }
-      if (inquiryList) inquiryList.innerHTML = "";
-      return;
+      showLogin("Your session expired. Please sign in again.", true);
+      return true;
     }
-
-    loadInquiries(session);
+    return false;
   }
 
-  function hideAllAuthPanels() {
-    if (magicLinkPanel) magicLinkPanel.hidden = true;
-    if (createPasswordPanel) createPasswordPanel.hidden = true;
-    if (forgotPasswordPanel) forgotPasswordPanel.hidden = true;
+  /* ---------------- Dates ---------------- */
+  function todayISO() {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   }
-
-  function togglePanel(panel) {
-    if (!panel) return;
-    var wasHidden = panel.hidden;
-    hideAllAuthPanels();
-    panel.hidden = !wasHidden;
-    if (!panel.hidden) {
-      var firstInput = panel.querySelector("input");
-      if (firstInput) firstInput.focus();
-    }
+  function addDays(iso, n) {
+    var p = iso.split("-").map(Number);
+    var d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + n));
+    return d.toISOString().slice(0, 10);
   }
-
-  function formatDate(iso) {
+  function isISODate(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || "")); }
+  function fmtDay(iso, opts) {
+    var p = iso.split("-").map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).toLocaleDateString("en-US",
+      Object.assign({ timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }, opts || {}));
+  }
+  function fmtTime(t) {
+    if (!t) return "";
+    var m = String(t).match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return String(t);
+    var hh = +m[1], ampm = hh >= 12 ? "PM" : "AM";
+    hh = hh % 12 || 12;
+    return hh + ":" + m[2] + " " + ampm;
+  }
+  function fmtStamp(iso) {
     if (!iso) return "—";
     try {
-      var d = new Date(iso);
-      return d.toLocaleString("en-US", {
-        timeZone: "America/New_York",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit"
-      });
-    } catch (e) {
-      return iso;
+      return new Date(iso).toLocaleString("en-US", { timeZone: TZ, month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+    } catch (e) { return iso; }
+  }
+  function money(n) {
+    if (n === null || n === undefined || n === "" || isNaN(+n)) return "";
+    var v = +n;
+    return "$" + (v % 1 ? v.toFixed(2) : String(v));
+  }
+
+  /* ---------------- Row helpers ---------------- */
+  function normalize(row) {
+    var r = Object.assign({}, row);
+    r.status = LEGACY_TO_NEW[r.status] || r.status || "new";
+    if (STAGES.every(function (s) { return s.key !== r.status; })) r.status = "new";
+    if (state.legacy) {
+      r.source = r.source || "website";
+      r.deposit_paid = !!r.deposit_paid;
+      r.paid_in_full = !!r.paid_in_full;
+      r.priority = !!r.priority;
     }
+    return r;
   }
-
-  function previewText(text, max) {
-    if (!text) return "";
-    var t = String(text).replace(/\s+/g, " ").trim();
-    if (t.length <= max) return t;
-    return t.slice(0, max - 1) + "…";
+  /** Pickup date used for scheduling: pickup_date, else a clean event_date. */
+  function dueDate(r) {
+    if (r.pickup_date) return String(r.pickup_date).slice(0, 10);
+    if (isISODate(r.event_date)) return r.event_date;
+    return null;
   }
-
-  function statusBadgeClass(status) {
-    var s = (status || "new").toLowerCase();
-    return "status-badge status-" + s;
+  function isOpen(r) { return OPEN_STAGES.indexOf(r.status) !== -1; }
+  function needsDeposit(r) { return DEPOSIT_STAGES.indexOf(r.status) !== -1 && !r.deposit_paid && !r.paid_in_full; }
+  function summaryText(r) {
+    var bits = [];
+    if (r.items) return r.items;
+    if (r.event_type) bits.push(r.event_type);
+    if (r.message) bits.push(r.message);
+    return bits.join(" — ");
   }
-
-  function loadInquiries(session) {
-    if (inboxStatus) {
-      inboxStatus.className = "admin-alert is-visible";
-      inboxStatus.textContent = "Loading inquiries…";
+  function preview(text, max) {
+    var t = String(text || "").replace(/\s+/g, " ").trim();
+    return t.length <= max ? t : t.slice(0, max - 1) + "…";
+  }
+  function dueInfo(r) {
+    var d = dueDate(r);
+    if (!d) {
+      if (r.event_date) return { text: "Event: " + r.event_date, cls: "due-none" };
+      return { text: "No pickup date", cls: "due-none" };
     }
-    if (inquiryList) inquiryList.innerHTML = "";
-
-    fetch(
-      SUPABASE_URL +
-        "/rest/v1/inquiries?select=*&order=created_at.desc",
-      {
-        method: "GET",
-        headers: userHeaders(session.access_token)
+    var today = todayISO();
+    var time = fmtTime(r.pickup_time);
+    var label, cls;
+    var active = isOpen(r);
+    if (d < today && active) { label = "Overdue · " + fmtDay(d); cls = "due-overdue"; }
+    else if (d === today) { label = "Today"; cls = active ? "due-today" : "due-later"; }
+    else if (d === addDays(today, 1)) { label = "Tomorrow"; cls = active ? "due-tomorrow" : "due-later"; }
+    else { label = fmtDay(d); cls = "due-later"; }
+    if (!r.pickup_date) label = "Event: " + label;
+    return { text: label + (time ? " · " + time : ""), cls: cls };
+  }
+  function depositBadge(r) {
+    if (r.paid_in_full) return h("span", { class: "badge badge-paid", text: "Paid in full" });
+    if (r.deposit_paid) return h("span", { class: "badge badge-paid", text: "Deposit" + (r.deposit_amount ? " " + money(r.deposit_amount) : "") + " ✓" });
+    if (r.status === "new" || r.status === "declined" || r.status === "archived") return null;
+    if (r.status === "completed") return h("span", { class: "badge badge-muted", text: "No payment logged" });
+    return h("span", { class: "badge badge-unpaid", text: "No deposit" });
+  }
+  function sortRows(rows, mode) {
+    var copy = rows.slice();
+    copy.sort(function (a, b) {
+      if (mode === "created") return String(b.created_at || "").localeCompare(String(a.created_at || ""));
+      if (mode === "completed") {
+        return String(dueDate(b) || b.updated_at || "").localeCompare(String(dueDate(a) || a.updated_at || ""));
       }
-    )
-      .then(function (res) {
-        if (res.status === 401 || res.status === 403) {
-          throw { kind: "forbidden", status: res.status };
-        }
-        if (!res.ok) {
-          return res.text().then(function (t) {
-            throw new Error("Load failed (" + res.status + "): " + t);
-          });
-        }
-        return res.json();
-      })
+      if (!!b.priority !== !!a.priority) return b.priority ? 1 : -1;
+      var da = dueDate(a), db = dueDate(b);
+      if (da && db && da !== db) return da < db ? -1 : 1;
+      if (da && !db) return -1;
+      if (!da && db) return 1;
+      if (da && db) {
+        var ta = a.pickup_time || "99", tb = b.pickup_time || "99";
+        if (ta !== tb) return ta < tb ? -1 : 1;
+      }
+      return String(b.created_at || "").localeCompare(String(a.created_at || ""));
+    });
+    return copy;
+  }
+  function findRow(id) {
+    for (var i = 0; i < state.rows.length; i++) if (String(state.rows[i].id) === String(id)) return state.rows[i];
+    return null;
+  }
+
+  /* ---------------- Loading ---------------- */
+  function detectSchema() {
+    return api("GET", "/rest/v1/inquiries?select=" + NEW_COLUMNS.join(",") + "&limit=1")
+      .then(function () { state.legacy = false; })
+      .catch(function (err) {
+        if (isMissingColumnError(err)) { state.legacy = true; return; }
+        throw err;
+      });
+  }
+
+  function loadRows(quiet) {
+    if (!quiet) setAlert(appStatus, "Loading orders…");
+    return detectSchema()
+      .then(function () { return api("GET", "/rest/v1/inquiries?select=*&order=created_at.desc"); })
       .then(function (rows) {
-        if (inboxStatus) {
-          inboxStatus.className = "admin-alert";
-          inboxStatus.textContent = "";
-          inboxStatus.classList.remove("is-visible");
-        }
-        renderInquiries(rows || [], session);
+        state.rows = (rows || []).map(normalize);
+        showSchemaNotice();
+        renderAll();
       })
       .catch(function (err) {
-        if (err && err.kind === "forbidden") {
-          if (inboxStatus) {
-            inboxStatus.className = "admin-alert admin-alert-warn is-visible";
-            inboxStatus.textContent =
-              "This email isn’t an owner account. RLS denied access to inquiries. Sign out and use an owner email.";
-          }
-          if (inquiryList) inquiryList.innerHTML = "";
-          return;
-        }
+        if (handleAuthLoss(err)) return;
         console.error(err);
-        if (inboxStatus) {
-          inboxStatus.className = "admin-alert admin-alert-error is-visible";
-          inboxStatus.textContent =
-            "Couldn’t load inquiries. Try signing out and back in.";
+        if (err && err.kind === "forbidden") {
+          setAlert(appStatus, "This account isn’t allowed to view orders. Sign out and use an owner email.", "warn");
+        } else {
+          setAlert(appStatus, "Couldn’t load orders. " + describeError(err), "error");
         }
       });
   }
 
-  function renderInquiries(rows, session) {
-    if (!inquiryList) return;
-    inquiryList.innerHTML = "";
+  function showSchemaNotice() {
+    if (state.legacy) {
+      setAlert(appStatus, [
+        h("strong", { text: "Database upgrade needed. " }),
+        "The order-board columns (pickup date, price, deposit…) aren’t in the database yet, so those fields are read-only and only New / Contacted / Confirmed / Archived can be saved. Run supabase/migrations/002_order_board.sql in the Supabase SQL editor, then reload."
+      ], "warn");
+    } else {
+      setAlert(appStatus, "");
+    }
+    var addBtn = $("add-order-btn");
+    if (addBtn) {
+      addBtn.disabled = state.legacy;
+      addBtn.title = state.legacy ? "Available after the database upgrade" : "";
+    }
+  }
 
+  /* ---------------- Saving ---------------- */
+  function patchRow(id, fields) {
+    var body = Object.assign({}, fields);
+    if (state.legacy) {
+      if (body.status !== undefined) {
+        if (!NEW_TO_LEGACY[body.status]) {
+          return Promise.reject({ kind: "legacy", message: "“" + stage(body.status).label + "” needs the database upgrade (migration 002)." });
+        }
+        body.status = NEW_TO_LEGACY[body.status];
+      }
+      NEW_COLUMNS.forEach(function (c) { delete body[c]; });
+    }
+    return api("PATCH", "/rest/v1/inquiries?id=eq." + encodeURIComponent(id), body, "return=representation")
+      .then(function (rows) {
+        var saved = rows && rows[0];
+        if (!saved) throw { kind: "forbidden" };
+        return normalize(saved);
+      });
+  }
+
+  function replaceRow(saved) {
+    for (var i = 0; i < state.rows.length; i++) {
+      if (String(state.rows[i].id) === String(saved.id)) { state.rows[i] = saved; return; }
+    }
+    state.rows.unshift(saved);
+  }
+
+  function moveTo(id, newStatus) {
+    var row = findRow(id);
+    if (!row || row.status === newStatus) return;
+    var prev = row.status;
+    row.status = newStatus; // optimistic
+    renderAll();
+    patchRow(id, { status: newStatus })
+      .then(function (saved) {
+        replaceRow(saved);
+        renderAll();
+        toast("Saved · " + (row.name || "Order") + " → " + stage(newStatus).label);
+      })
+      .catch(function (err) {
+        row.status = prev;
+        renderAll();
+        if (handleAuthLoss(err)) return;
+        toast(err && err.kind === "legacy" ? err.message : describeError(err), "error");
+      });
+  }
+
+  /* ---------------- Rendering ---------------- */
+  function renderAll() {
+    renderSummary();
+    if (state.view === "board") renderBoard();
+    else if (state.view === "list") renderList();
+    else renderWeek();
+  }
+
+  function renderSummary() {
+    var today = todayISO(), end = addDays(today, 6);
+    var nNew = 0, nWeek = 0, nOverdue = 0, nUnpaid = 0;
+    state.rows.forEach(function (r) {
+      if (r.status === "new") nNew++;
+      var d = dueDate(r);
+      if (isOpen(r) && d) {
+        if (d >= today && d <= end) nWeek++;
+        else if (d < today) nOverdue++;
+      }
+      if (needsDeposit(r)) nUnpaid++;
+    });
+    $("sum-new").textContent = nNew;
+    $("sum-week").textContent = nWeek;
+    $("sum-week-sub").textContent = nOverdue ? nOverdue + " overdue" : "";
+    $("sum-unpaid").textContent = nUnpaid;
+    document.querySelector('[data-summary="new"]').classList.toggle("is-hot", nNew > 0);
+    document.querySelector('[data-summary="week"]').classList.toggle("is-hot", nOverdue > 0);
+    document.querySelector('[data-summary="unpaid"]').classList.toggle("is-hot", nUnpaid > 0);
+  }
+
+  var canDrag = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  if (canDrag) document.body.classList.add("can-drag");
+
+  function stageSelect(r, onChange, compact) {
+    var sel = h("select", { class: compact ? "card-stage" : "", "aria-label": "Stage for " + (r.name || "order") });
+    STAGES.forEach(function (s) {
+      var opt = h("option", { value: s.key, text: s.label });
+      if (state.legacy && !NEW_TO_LEGACY[s.key]) opt.disabled = true;
+      sel.appendChild(opt);
+    });
+    sel.value = r.status;
+    sel.addEventListener("click", function (e) { e.stopPropagation(); });
+    sel.addEventListener("change", function (e) { e.stopPropagation(); onChange(sel.value); });
+    return sel;
+  }
+
+  function orderCard(r, opts) {
+    opts = opts || {};
+    var due = dueInfo(r);
+    var idx = FLOW.indexOf(r.status);
+    var prevKey = idx > 0 ? FLOW[idx - 1] : null;
+    var nextKey = idx !== -1 && idx < FLOW.length - 1 ? FLOW[idx + 1] : null;
+    var closed = stage(r.status).closed;
+
+    var card = h("article", {
+      class: "order-card" + (r.priority ? " is-priority" : "") + (due.cls === "due-overdue" ? " is-overdue" : ""),
+      tabindex: "0",
+      dataset: { id: r.id },
+      draggable: canDrag ? "true" : null,
+      "aria-label": (r.name || "Order") + ", " + stage(r.status).label + ", " + due.text
+    },
+      h("div", { class: "card-top" },
+        h("strong", { class: "card-name" }, r.priority ? h("span", { class: "star", title: "Priority", text: "★ " }) : null, r.name || "(no name)"),
+        r.price !== null && r.price !== undefined && r.price !== "" ? h("span", { class: "card-price", text: money(r.price) }) : null
+      ),
+      h("div", { class: "card-due " + due.cls, text: due.text }),
+      summaryText(r) ? h("p", { class: "card-summary", text: preview(summaryText(r), 110) }) : null,
+      h("div", { class: "card-badges" },
+        opts.showStage ? h("span", { class: "badge stage-badge stage-" + r.status, text: stage(r.status).short }) : null,
+        depositBadge(r),
+        r.source && r.source !== "website" ? h("span", { class: "badge badge-source", text: SOURCES[r.source] || r.source }) : null
+      ),
+      h("div", { class: "card-actions" },
+        h("button", {
+          type: "button", class: "card-step", "aria-label": prevKey ? "Move back to " + stage(prevKey).label : "Move back",
+          disabled: !prevKey || (state.legacy && !NEW_TO_LEGACY[prevKey]) ? true : null,
+          onclick: function (e) { e.stopPropagation(); if (prevKey) moveTo(r.id, prevKey); }
+        }, "‹"),
+        stageSelect(r, function (v) { moveTo(r.id, v); }, true),
+        closed
+          ? h("button", { type: "button", class: "card-step card-step-next", "aria-label": "Restore to New",
+              onclick: function (e) { e.stopPropagation(); moveTo(r.id, "new"); } }, "Restore")
+          : h("button", {
+              type: "button", class: "card-step card-step-next",
+              "aria-label": nextKey ? "Move forward to " + stage(nextKey).label : "Move forward",
+              disabled: !nextKey || (state.legacy && !NEW_TO_LEGACY[nextKey]) ? true : null,
+              onclick: function (e) { e.stopPropagation(); if (nextKey) moveTo(r.id, nextKey); }
+            }, nextKey ? stage(nextKey).short + " ›" : "›")
+      )
+    );
+
+    card.addEventListener("click", function () { openModal(r.id); });
+    card.addEventListener("keydown", function (e) {
+      if ((e.key === "Enter" || e.key === " ") && e.target === card) { e.preventDefault(); openModal(r.id); }
+    });
+    if (canDrag) {
+      card.addEventListener("dragstart", function (e) {
+        e.dataTransfer.setData("text/plain", String(r.id));
+        e.dataTransfer.effectAllowed = "move";
+        card.classList.add("is-dragging");
+        document.body.classList.add("is-dragging-card");
+      });
+      card.addEventListener("dragend", function () {
+        card.classList.remove("is-dragging");
+        document.body.classList.remove("is-dragging-card");
+      });
+    }
+    return card;
+  }
+
+  function boardStages() {
+    return STAGES.filter(function (s) { return state.showClosed || !s.closed; });
+  }
+
+  function renderBoard() {
+    var board = $("board"), jump = $("stage-jump");
+    clear(board); clear(jump);
+    boardStages().forEach(function (s) {
+      var rows = state.rows.filter(function (r) { return r.status === s.key; });
+      rows = sortRows(rows, s.key === "completed" || s.closed ? "completed" : "pickup");
+      var list = h("div", { class: "column-cards" });
+      if (!rows.length) list.appendChild(h("p", { class: "column-empty", text: canDrag ? "Drop orders here" : "Nothing here" }));
+      rows.forEach(function (r) { list.appendChild(orderCard(r)); });
+
+      var col = h("section", { class: "column column-" + s.key + (s.closed ? " column-closed" : ""), id: "col-" + s.key, dataset: { stage: s.key } },
+        h("header", { class: "column-head" },
+          h("h3", { text: s.label }),
+          h("span", { class: "column-count", text: String(rows.length) })
+        ),
+        list
+      );
+      if (canDrag) {
+        col.addEventListener("dragover", function (e) {
+          if (state.legacy && !NEW_TO_LEGACY[s.key]) return;
+          e.preventDefault(); e.dataTransfer.dropEffect = "move"; col.classList.add("is-drop-target");
+        });
+        col.addEventListener("dragleave", function (e) {
+          if (!col.contains(e.relatedTarget)) col.classList.remove("is-drop-target");
+        });
+        col.addEventListener("drop", function (e) {
+          e.preventDefault(); col.classList.remove("is-drop-target");
+          var id = e.dataTransfer.getData("text/plain");
+          if (id) moveTo(id, s.key);
+        });
+      }
+      board.appendChild(col);
+
+      jump.appendChild(h("button", {
+        type: "button", class: "jump-chip stage-" + s.key,
+        onclick: function () {
+          var target = $("col-" + s.key);
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+        }
+      }, s.short + " ", h("b", { text: String(rows.length) })));
+    });
+  }
+
+  function fillListFilter() {
+    var sel = $("list-filter");
+    clear(sel);
+    [["active", "All open orders"], ["unpaid", "Unpaid deposits"]].forEach(function (o) {
+      sel.appendChild(h("option", { value: o[0], text: o[1] }));
+    });
+    var grp = h("optgroup", { label: "Stage" });
+    STAGES.forEach(function (s) { grp.appendChild(h("option", { value: s.key, text: s.label })); });
+    sel.appendChild(grp);
+    sel.appendChild(h("option", { value: "closed", text: "Declined & archived" }));
+    sel.appendChild(h("option", { value: "all", text: "Everything" }));
+    sel.value = state.listFilter;
+  }
+
+  function matchesFilter(r) {
+    var f = state.listFilter;
+    if (f === "active") {
+      if (!(isOpen(r) || (state.showClosed && stage(r.status).closed))) return false;
+    } else if (f === "unpaid") { if (!needsDeposit(r)) return false; }
+    else if (f === "closed") { if (!stage(r.status).closed) return false; }
+    else if (f !== "all") { if (r.status !== f) return false; }
+    var q = state.search.trim().toLowerCase();
+    if (q) {
+      var qDigits = q.replace(/\D/g, "");
+      var hay = [r.name, r.email, r.phone, r.items, r.message, r.event_type, r.notes].join(" ").toLowerCase();
+      var phoneDigits = String(r.phone || "").replace(/\D/g, "");
+      if (hay.indexOf(q) === -1 && !(qDigits.length >= 3 && phoneDigits.indexOf(qDigits) !== -1)) return false;
+    }
+    return true;
+  }
+
+  function renderList() {
+    var box = $("order-list");
+    clear(box);
+    var rows = sortRows(state.rows.filter(matchesFilter), state.listSort);
+    $("list-count").textContent = rows.length + (rows.length === 1 ? " order" : " orders");
     if (!rows.length) {
-      inquiryList.innerHTML =
-        '<p class="admin-empty">No inquiries yet. New contact-form submissions will appear here.</p>';
+      box.appendChild(h("p", { class: "admin-empty", text: state.rows.length ? "No orders match." : "No orders yet. New contact-form inquiries will appear here." }));
+      return;
+    }
+    rows.forEach(function (r) { box.appendChild(orderCard(r, { showStage: true })); });
+  }
+
+  function renderWeek() {
+    var box = $("week-list");
+    clear(box);
+    var today = todayISO();
+    var groups = [];
+    var overdue = state.rows.filter(function (r) { var d = dueDate(r); return isOpen(r) && d && d < today; });
+    if (overdue.length) groups.push({ key: "overdue", title: "Overdue", sub: "Past pickup date and not picked up", rows: overdue });
+    for (var i = 0; i < 7; i++) {
+      var day = addDays(today, i);
+      var title = i === 0 ? "Today" : i === 1 ? "Tomorrow" : fmtDay(day, { weekday: "long", month: undefined, day: undefined });
+      groups.push({
+        key: day, title: title, sub: fmtDay(day, { weekday: i < 2 ? "long" : undefined }),
+        rows: state.rows.filter(function (r) {
+          return dueDate(r) === day && (isOpen(r) || r.status === "completed" || (state.showClosed && stage(r.status).closed));
+        })
+      });
+    }
+    groups.forEach(function (g) {
+      var sorted = sortRows(g.rows, "pickup");
+      var sec = h("section", { class: "week-day" + (g.key === "overdue" ? " week-overdue" : "") + (g.key === today ? " week-today" : "") },
+        h("header", { class: "week-head" },
+          h("h3", { text: g.title }),
+          h("span", { class: "week-sub", text: g.sub }),
+          h("span", { class: "column-count", text: String(sorted.length) })
+        )
+      );
+      if (!sorted.length) sec.appendChild(h("p", { class: "week-empty", text: "Nothing due" }));
+      var list = h("div", { class: "week-cards" });
+      sorted.forEach(function (r) { list.appendChild(orderCard(r, { showStage: true })); });
+      sec.appendChild(list);
+      box.appendChild(sec);
+    });
+  }
+
+  function setView(v) {
+    state.view = v;
+    document.querySelectorAll(".view-tab").forEach(function (t) {
+      t.setAttribute("aria-selected", t.dataset.view === v ? "true" : "false");
+    });
+    $("view-board").hidden = v !== "board";
+    $("view-list").hidden = v !== "list";
+    $("view-week").hidden = v !== "week";
+    savePrefs();
+    renderAll();
+  }
+
+  function savePrefs() {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ view: state.view, showClosed: state.showClosed, listSort: state.listSort })); } catch (e) {}
+  }
+  function loadPrefs() {
+    try {
+      var p = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+      if (p.view) state.view = p.view;
+      state.showClosed = !!p.showClosed;
+      if (p.listSort) state.listSort = p.listSort;
+    } catch (e) {}
+  }
+
+  /* ---------------- Modal ---------------- */
+  var F = {
+    status: $("f-status"), source: $("f-source"), name: $("f-name"), phone: $("f-phone"), email: $("f-email"),
+    event_type: $("f-event-type"), event_date: $("f-event-date"), pickup_date: $("f-pickup-date"), pickup_time: $("f-pickup-time"),
+    items: $("f-items"), price: $("f-price"), deposit_amount: $("f-deposit-amount"), deposit_paid: $("f-deposit-paid"),
+    paid_in_full: $("f-paid-full"), priority: $("f-priority"), notes: $("f-notes")
+  };
+  STAGES.forEach(function (s) { F.status.appendChild(h("option", { value: s.key, text: s.label })); });
+
+  var lastFocus = null;
+  function openModal(id) {
+    var creating = id === "new";
+    var r = creating ? {
+      status: "confirmed", source: "phone", name: "", phone: "", email: "", event_type: "", event_date: "",
+      pickup_date: "", pickup_time: "", items: "", price: null, deposit_amount: null, deposit_paid: false,
+      paid_in_full: false, priority: false, notes: "", message: ""
+    } : findRow(id);
+    if (!r) return;
+    state.editingId = creating ? "new" : r.id;
+    lastFocus = document.activeElement;
+
+    $("modal-eyebrow").textContent = creating ? "New order" : stage(r.status).label;
+    $("modal-title").textContent = creating ? "Add an order" : (r.name || "Order");
+
+    Array.prototype.forEach.call(F.status.options, function (o) {
+      o.disabled = state.legacy && !NEW_TO_LEGACY[o.value];
+    });
+    F.status.value = r.status || "new";
+    F.source.value = r.source || "website";
+    F.name.value = r.name || "";
+    F.phone.value = r.phone || "";
+    F.email.value = r.email || "";
+    F.event_type.value = r.event_type || "";
+    F.event_date.value = r.event_date || "";
+    F.pickup_date.value = r.pickup_date ? String(r.pickup_date).slice(0, 10) : "";
+    F.pickup_time.value = /^\d{1,2}:\d{2}/.test(r.pickup_time || "") ? String(r.pickup_time).slice(0, 5).padStart(5, "0") : "";
+    F.items.value = r.items || "";
+    F.price.value = r.price !== null && r.price !== undefined ? r.price : "";
+    F.deposit_amount.value = r.deposit_amount !== null && r.deposit_amount !== undefined ? r.deposit_amount : "";
+    F.deposit_paid.checked = !!r.deposit_paid;
+    F.paid_in_full.checked = !!r.paid_in_full;
+    F.priority.checked = !!r.priority;
+    F.notes.value = r.notes || "";
+
+    // Pickup date placeholder hint from customer's event date
+    F.pickup_date.title = !r.pickup_date && isISODate(r.event_date) ? "Customer event date: " + r.event_date : "";
+
+    document.querySelectorAll("[data-new-col]").forEach(function (el) {
+      el.disabled = state.legacy;
+      var grp = el.closest(".form-group, .check");
+      if (grp) grp.classList.toggle("is-locked", state.legacy);
+    });
+
+    renderContactQuick();
+    var msgBox = $("customer-message");
+    msgBox.hidden = !r.message;
+    $("customer-message-text").textContent = r.message || "";
+
+    var meta = [];
+    if (!creating) {
+      meta.push("Received " + fmtStamp(r.created_at));
+      if (r.updated_at) meta.push("updated " + fmtStamp(r.updated_at));
+      if (r.source) meta.push("via " + (SOURCES[r.source] || r.source));
+    }
+    $("modal-meta").textContent = meta.join(" · ");
+    $("archive-btn").hidden = creating || r.status === "archived";
+
+    modal.hidden = false;
+    document.body.classList.add("modal-open");
+    modal.querySelector(".modal-body").scrollTop = 0;
+    setTimeout(function () { (creating ? F.name : modal.querySelector(".modal-close")).focus(); }, 30);
+  }
+
+  function renderContactQuick() {
+    var box = $("contact-quick");
+    clear(box);
+    var phone = F.phone.value.trim(), email = F.email.value.trim();
+    if (phone) {
+      var tel = phone.replace(/[^\d+]/g, "");
+      box.appendChild(h("a", { class: "quick-btn", href: "tel:" + tel }, "📞 Call"));
+      box.appendChild(h("a", { class: "quick-btn", href: "sms:" + tel }, "💬 Text"));
+    }
+    if (email) {
+      var subj = "Your order with Lally's Cakes & Sweets";
+      box.appendChild(h("a", { class: "quick-btn", href: "mailto:" + encodeURIComponent(email).replace(/%40/g, "@") + "?subject=" + encodeURIComponent(subj) }, "✉️ Email"));
+    }
+    box.hidden = !box.firstChild;
+  }
+  F.phone.addEventListener("input", renderContactQuick);
+  F.email.addEventListener("input", renderContactQuick);
+  F.paid_in_full.addEventListener("change", function () { if (F.paid_in_full.checked) F.deposit_paid.checked = true; });
+  F.deposit_amount.addEventListener("input", function () { if (F.deposit_amount.value && +F.deposit_amount.value > 0) F.deposit_paid.checked = true; });
+
+  function closeModal() {
+    modal.hidden = true;
+    document.body.classList.remove("modal-open");
+    state.editingId = null;
+    if (lastFocus && lastFocus.focus && document.body.contains(lastFocus)) lastFocus.focus();
+  }
+
+  function numOrNull(v) { return v === "" || v === null || isNaN(+v) ? null : Math.round(+v * 100) / 100; }
+  function textOrNull(v) { v = String(v || "").trim(); return v ? v : null; }
+
+  function collectForm() {
+    return {
+      status: F.status.value,
+      source: F.source.value,
+      name: F.name.value.trim(),
+      phone: textOrNull(F.phone.value),
+      email: textOrNull(F.email.value),
+      event_type: textOrNull(F.event_type.value),
+      event_date: textOrNull(F.event_date.value),
+      pickup_date: F.pickup_date.value || null,
+      pickup_time: F.pickup_time.value || null,
+      items: textOrNull(F.items.value),
+      price: numOrNull(F.price.value),
+      deposit_amount: numOrNull(F.deposit_amount.value),
+      deposit_paid: F.deposit_paid.checked,
+      paid_in_full: F.paid_in_full.checked,
+      priority: F.priority.checked,
+      notes: textOrNull(F.notes.value)
+    };
+  }
+
+  orderForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var data = collectForm();
+    if (!data.name) { toast("Please enter the customer’s name.", "error"); F.name.focus(); return; }
+    if (data.price !== null && data.price < 0 || data.deposit_amount !== null && data.deposit_amount < 0) {
+      toast("Amounts can’t be negative.", "error"); return;
+    }
+    var btn = $("save-order-btn");
+    btn.disabled = true; btn.textContent = "Saving…";
+    var creating = state.editingId === "new";
+    var p;
+    if (creating) {
+      p = api("POST", "/rest/v1/inquiries", data, "return=representation").then(function (rows) {
+        if (!rows || !rows[0]) throw { kind: "forbidden" };
+        return normalize(rows[0]);
+      });
+    } else {
+      // Before migration 002, email is NOT NULL: don't blank it out.
+      if (state.legacy && !data.email) delete data.email;
+      p = patchRow(state.editingId, data);
+    }
+    p.then(function (saved) {
+      replaceRow(saved);
+      closeModal();
+      renderAll();
+      toast(creating ? "Order added ✓" : "Saved ✓");
+    }).catch(function (err) {
+      if (handleAuthLoss(err)) { closeModal(); return; }
+      console.error(err);
+      if (isMissingColumnError(err) && !state.legacy) { state.legacy = true; showSchemaNotice(); }
+      toast(err && err.kind === "legacy" ? err.message : describeError(err), "error");
+    }).finally(function () {
+      btn.disabled = false; btn.textContent = "Save";
+    });
+  });
+
+  $("archive-btn").addEventListener("click", function () {
+    var id = state.editingId;
+    if (!id || id === "new") return;
+    closeModal();
+    moveTo(id, "archived");
+  });
+
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal || e.target.closest("[data-close]")) closeModal();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !modal.hidden) closeModal();
+  });
+
+  /* ---------------- App shell ---------------- */
+  function showLogin(message, isError) {
+    authWrap.hidden = false;
+    appWrap.hidden = true;
+    hero.hidden = false;
+    document.body.classList.remove("is-authed");
+    signinPanel.hidden = false;
+    resetPanel.hidden = true;
+    setLoginStatus(message || "", isError);
+  }
+
+  function showApp(session) {
+    var email = (session.user && session.user.email) || decodeJwtEmail(session.access_token) || "";
+    authWrap.hidden = true;
+    appWrap.hidden = false;
+    hero.hidden = true;
+    document.body.classList.add("is-authed");
+    $("signed-in-email").textContent = email || "signed in";
+    $("show-closed").checked = state.showClosed;
+    $("list-sort").value = state.listSort;
+    fillListFilter();
+    setView(state.view);
+    if (!isOwnerEmail(email)) {
+      setAlert(appStatus, "This email isn’t an owner account. Only bakery owner emails can view orders. Sign out and try an owner address.", "warn");
+      return;
+    }
+    loadRows();
+  }
+
+  function showResetPanel(session) {
+    authWrap.hidden = false;
+    appWrap.hidden = true;
+    hero.hidden = false;
+    signinPanel.hidden = true;
+    resetPanel.hidden = false;
+    $("reset-email").textContent = (session.user && session.user.email) || "your account";
+    setLoginStatus("", false);
+    setTimeout(function () { $("new-password").focus(); }, 30);
+  }
+
+  /* Sign in */
+  $("login-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = $("owner-email").value.trim();
+    var pwInput = $("owner-password");
+    var btn = e.target.querySelector('button[type="submit"]');
+    if (!email || !pwInput.value) { setLoginStatus("Enter your owner email and password.", true); return; }
+    btn.disabled = true; btn.textContent = "Signing in…";
+    setLoginStatus("", false);
+    fetch(SUPABASE_URL + "/auth/v1/token?grant_type=password", {
+      method: "POST", headers: anonHeaders(), body: JSON.stringify({ email: email, password: pwInput.value })
+    }).then(parseJson).then(function (r) {
+      if (r.ok && r.data && r.data.access_token) {
+        pwInput.value = "";
+        var s = sessionFromTokenResponse(r.data, email);
+        saveSession(s);
+        showApp(s);
+      } else {
+        setLoginStatus(friendlyAuthError(r.data, "Couldn’t sign in. Check your email and password."), true);
+      }
+    }).catch(function () {
+      setLoginStatus("Couldn’t sign in. Check your connection and try again.", true);
+    }).finally(function () { btn.disabled = false; btn.textContent = "Sign in"; });
+  });
+
+  /* Forgot password */
+  toggleForgot.addEventListener("click", function () {
+    forgotPanel.hidden = !forgotPanel.hidden;
+    toggleForgot.setAttribute("aria-expanded", forgotPanel.hidden ? "false" : "true");
+    if (!forgotPanel.hidden) {
+      var main = $("owner-email").value.trim(), rec = $("recover-email");
+      if (main && !rec.value) rec.value = main;
+      rec.focus();
+    }
+  });
+  $("forgot-password-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = $("recover-email").value.trim();
+    var btn = e.target.querySelector('button[type="submit"]');
+    if (!email) { setLoginStatus("Enter your owner email to reset your password.", true); return; }
+    btn.disabled = true; btn.textContent = "Sending…";
+    fetch(SUPABASE_URL + "/auth/v1/recover?redirect_to=" + encodeURIComponent(adminRedirectUrl()), {
+      method: "POST", headers: anonHeaders(), body: JSON.stringify({ email: email })
+    }).then(parseJson).then(function (r) {
+      if (r.ok) {
+        setLoginStatus("If that’s an owner account, a reset link is on its way. Open it on this device to choose a new password.", false);
+        forgotPanel.hidden = true;
+        toggleForgot.setAttribute("aria-expanded", "false");
+      } else {
+        setLoginStatus(friendlyAuthError(r.data, "Couldn’t send reset email. Try again."), true);
+      }
+    }).catch(function () {
+      setLoginStatus("Couldn’t send reset email. Check your connection and try again.", true);
+    }).finally(function () { btn.disabled = false; btn.textContent = "Send reset email"; });
+  });
+
+  /* Set new password (recovery session) */
+  $("reset-password-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var pw = $("new-password").value, pw2 = $("new-password-confirm").value;
+    var btn = e.target.querySelector('button[type="submit"]');
+    if (pw.length < 8) { setLoginStatus("Use at least 8 characters.", true); return; }
+    if (pw !== pw2) { setLoginStatus("Passwords don’t match.", true); return; }
+    btn.disabled = true; btn.textContent = "Saving…";
+    validSession().then(function (s) {
+      if (!s) throw { kind: "auth" };
+      return fetch(SUPABASE_URL + "/auth/v1/user", {
+        method: "PUT", headers: userHeaders(s.access_token), body: JSON.stringify({ password: pw })
+      }).then(parseJson).then(function (r) {
+        if (!r.ok) throw { kind: "authapi", data: r.data };
+        $("new-password").value = ""; $("new-password-confirm").value = "";
+        toast("Password updated ✓");
+        showApp(s);
+      });
+    }).catch(function (err) {
+      if (err && err.kind === "auth") {
+        clearSession();
+        showLogin("That reset link expired. Use “Forgot password?” to get a new one.", true);
+        return;
+      }
+      setLoginStatus(friendlyAuthError(err && err.data, "Couldn’t update password. Try again."), true);
+    }).finally(function () { btn.disabled = false; btn.textContent = "Save new password"; });
+  });
+
+  /* Signed-in controls */
+  $("sign-out-btn").addEventListener("click", function () {
+    var s = state.session;
+    if (s && s.access_token) {
+      fetch(SUPABASE_URL + "/auth/v1/logout", { method: "POST", headers: userHeaders(s.access_token) }).catch(function () {});
+    }
+    clearSession();
+    state.rows = [];
+    showLogin("Signed out.", false);
+  });
+  $("refresh-btn").addEventListener("click", function () { loadRows().then(function () { if (!state.legacy) toast("Up to date ✓"); }); });
+  $("add-order-btn").addEventListener("click", function () {
+    if (state.legacy) { toast("Adding orders needs the database upgrade (migration 002).", "error"); return; }
+    openModal("new");
+  });
+  document.querySelectorAll(".view-tab").forEach(function (t) {
+    t.addEventListener("click", function () { setView(t.dataset.view); });
+  });
+  $("show-closed").addEventListener("change", function (e) { state.showClosed = e.target.checked; savePrefs(); renderAll(); });
+  $("list-search").addEventListener("input", function (e) { state.search = e.target.value; renderList(); });
+  $("list-filter").addEventListener("change", function (e) { state.listFilter = e.target.value; renderList(); });
+  $("list-sort").addEventListener("change", function (e) { state.listSort = e.target.value; savePrefs(); renderList(); });
+  document.querySelectorAll("[data-summary]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var k = b.dataset.summary;
+      if (k === "week") { setView("week"); return; }
+      state.listFilter = k === "new" ? "new" : "unpaid";
+      state.search = ""; $("list-search").value = "";
+      fillListFilter();
+      setView("list");
+    });
+  });
+  // Refresh when the owner comes back to the tab/app (keeps phone view fresh).
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && !appWrap.hidden && state.editingId === null && isOwnerEmail(state.session && state.session.user && state.session.user.email)) {
+      loadRows(true);
+    }
+  });
+
+  /* ---------------- Boot ---------------- */
+  function boot() {
+    loadPrefs();
+    var hash = window.location.hash.replace(/^#/, "");
+    var params = hash ? new URLSearchParams(hash) : null;
+
+    if (params && (params.get("error") || params.get("error_description"))) {
+      clearHash();
+      var desc = (params.get("error_description") || "").replace(/\+/g, " ");
+      showLogin(/expired|invalid/i.test(desc + params.get("error_code"))
+        ? "That email link has expired or was already used. Use “Forgot password?” to get a new one."
+        : (desc || "That link didn’t work. Try again."), true);
       return;
     }
 
-    rows.forEach(function (row) {
-      var card = document.createElement("article");
-      card.className = "inquiry-card";
-      card.dataset.id = row.id;
-
-      var status = row.status || "new";
-      var head = document.createElement("button");
-      head.type = "button";
-      head.className = "inquiry-card-head";
-      head.setAttribute("aria-expanded", "false");
-      head.innerHTML =
-        '<div class="inquiry-card-meta">' +
-        '<strong class="inquiry-name"></strong>' +
-        '<span class="' +
-        statusBadgeClass(status) +
-        '">' +
-        escapeHtml(status) +
-        "</span>" +
-        "</div>" +
-        '<div class="inquiry-card-sub">' +
-        '<span class="inquiry-email"></span>' +
-        '<span class="inquiry-when"></span>' +
-        "</div>" +
-        '<p class="inquiry-preview"></p>';
-
-      head.querySelector(".inquiry-name").textContent = row.name || "—";
-      head.querySelector(".inquiry-email").textContent = row.email || "";
-      head.querySelector(".inquiry-when").textContent = formatDate(
-        row.created_at
-      );
-      head.querySelector(".inquiry-preview").textContent = previewText(
-        row.message,
-        120
-      );
-
-      var body = document.createElement("div");
-      body.className = "inquiry-card-body";
-      body.hidden = true;
-
-      var details = document.createElement("dl");
-      details.className = "inquiry-details";
-      details.innerHTML =
-        "<div><dt>Email</dt><dd><a class='inq-email' href='#'></a></dd></div>" +
-        "<div><dt>Phone</dt><dd class='inq-phone'></dd></div>" +
-        "<div><dt>Event date</dt><dd class='inq-event'></dd></div>" +
-        "<div><dt>Received</dt><dd class='inq-created'></dd></div>";
-      details.querySelector(".inq-email").textContent = row.email || "—";
-      details.querySelector(".inq-email").href =
-        "mailto:" + encodeURIComponent(row.email || "");
-      details.querySelector(".inq-phone").textContent = row.phone || "—";
-      details.querySelector(".inq-event").textContent = row.event_date || "—";
-      details.querySelector(".inq-created").textContent = formatDate(
-        row.created_at
-      );
-
-      var msgBlock = document.createElement("div");
-      msgBlock.className = "inquiry-message";
-      msgBlock.innerHTML = "<h3>Message</h3><p></p>";
-      msgBlock.querySelector("p").textContent = row.message || "";
-
-      var form = document.createElement("form");
-      form.className = "inquiry-edit";
-      form.innerHTML =
-        '<div class="form-group">' +
-        '<label for="status-' +
-        row.id +
-        '">Status</label>' +
-        '<select id="status-' +
-        row.id +
-        '" name="status">' +
-        '<option value="new">new</option>' +
-        '<option value="replied">replied</option>' +
-        '<option value="booked">booked</option>' +
-        '<option value="archived">archived</option>' +
-        "</select>" +
-        "</div>" +
-        '<div class="form-group">' +
-        '<label for="notes-' +
-        row.id +
-        '">Notes</label>' +
-        '<textarea id="notes-' +
-        row.id +
-        '" name="notes" rows="3" placeholder="Private notes (only owners see these)"></textarea>' +
-        "</div>" +
-        '<div class="inquiry-edit-actions">' +
-        '<button type="submit" class="btn btn-primary">Save</button>' +
-        '<span class="inquiry-save-msg" role="status"></span>' +
-        "</div>";
-
-      form.querySelector("select").value = status;
-      form.querySelector("textarea").value = row.notes || "";
-
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        saveInquiry(row.id, form, session, head);
+    if (params && params.get("access_token")) {
+      var s = sessionFromTokenResponse({
+        access_token: params.get("access_token"),
+        refresh_token: params.get("refresh_token"),
+        expires_in: parseInt(params.get("expires_in") || "3600", 10)
       });
-
-      body.appendChild(details);
-      body.appendChild(msgBlock);
-      body.appendChild(form);
-
-      head.addEventListener("click", function () {
-        var open = body.hidden;
-        body.hidden = !open;
-        head.setAttribute("aria-expanded", open ? "true" : "false");
-        card.classList.toggle("is-open", open);
-      });
-
-      card.appendChild(head);
-      card.appendChild(body);
-      inquiryList.appendChild(card);
-    });
-  }
-
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  function saveInquiry(id, form, session, head) {
-    var status = form.querySelector("select").value;
-    var notes = form.querySelector("textarea").value;
-    var msg = form.querySelector(".inquiry-save-msg");
-    var btn = form.querySelector('button[type="submit"]');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "Saving…";
+      saveSession(s);
+      clearHash();
+      if (params.get("type") === "recovery") { showResetPanel(s); return; }
+      showApp(s);
+      return;
     }
-    if (msg) msg.textContent = "";
 
-    fetch(SUPABASE_URL + "/rest/v1/inquiries?id=eq." + encodeURIComponent(id), {
-      method: "PATCH",
-      headers: Object.assign(userHeaders(session.access_token), {
-        Prefer: "return=minimal"
-      }),
-      body: JSON.stringify({ status: status, notes: notes })
-    })
-      .then(function (res) {
-        if (res.status === 401 || res.status === 403) {
-          throw { kind: "forbidden" };
-        }
-        if (!res.ok) {
-          return res.text().then(function (t) {
-            throw new Error("Save failed (" + res.status + "): " + t);
-          });
-        }
-        if (msg) msg.textContent = "Saved.";
-        var badge = head.querySelector(".status-badge");
-        if (badge) {
-          badge.className = statusBadgeClass(status);
-          badge.textContent = status;
-        }
-      })
-      .catch(function (err) {
-        console.error(err);
-        if (msg) {
-          msg.textContent =
-            err && err.kind === "forbidden"
-              ? "Not allowed — owner only."
-              : "Couldn’t save. Try again.";
-        }
-      })
-      .finally(function () {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = "Save";
-        }
-      });
-  }
-
-  function parseJsonResponse(res) {
-    return res
-      .json()
-      .then(function (data) {
-        return { ok: res.ok, status: res.status, data: data };
-      })
-      .catch(function () {
-        return { ok: res.ok, status: res.status, data: null };
-      });
-  }
-
-  /* ---- Password sign-in (primary) ---- */
-  if (loginForm) {
-    loginForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var emailInput = document.getElementById("owner-email");
-      var passwordInput = document.getElementById("owner-password");
-      var email = (emailInput && emailInput.value.trim()) || "";
-      var password = (passwordInput && passwordInput.value) || "";
-      var submitBtn = loginForm.querySelector('button[type="submit"]');
-
-      if (!email || !password) {
-        setLoginStatus("Enter your owner email and password.", true);
-        return;
-      }
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Signing in…";
-      }
-      setLoginStatus("Signing in…", false);
-
-      fetch(SUPABASE_URL + "/auth/v1/token?grant_type=password", {
-        method: "POST",
-        headers: anonHeaders(),
-        body: JSON.stringify({ email: email, password: password })
-      })
-        .then(parseJsonResponse)
-        .then(function (result) {
-          if (result.ok && result.data && result.data.access_token) {
-            var session = sessionFromTokenResponse(result.data);
-            if (!session.user.email) session.user.email = email;
-            saveSession(session);
-            clearHash();
-            setLoginStatus("", false);
-            if (passwordInput) passwordInput.value = "";
-            showInbox(session);
-            return;
-          }
-          setLoginStatus(
-            friendlyAuthError(
-              result.data,
-              "Couldn’t sign in. Check your email and password."
-            ),
-            true
-          );
-        })
-        .catch(function () {
-          setLoginStatus(
-            "Couldn’t sign in. Check your connection and try again.",
-            true
-          );
-        })
-        .finally(function () {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Sign in";
-          }
-        });
+    validSession().then(function (s) {
+      if (s) showApp(s); else showLogin("");
     });
   }
 
-  /* ---- Magic-link fallback ---- */
-  if (toggleMagicLink) {
-    toggleMagicLink.addEventListener("click", function () {
-      togglePanel(magicLinkPanel);
-      var mainEmail = document.getElementById("owner-email");
-      var magicEmail = document.getElementById("magic-email");
-      if (
-        magicLinkPanel &&
-        !magicLinkPanel.hidden &&
-        magicEmail &&
-        mainEmail &&
-        mainEmail.value &&
-        !magicEmail.value
-      ) {
-        magicEmail.value = mainEmail.value;
-      }
-    });
-  }
-
-  if (magicLinkForm) {
-    magicLinkForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var emailInput = document.getElementById("magic-email");
-      var email = (emailInput && emailInput.value.trim()) || "";
-      var submitBtn = magicLinkForm.querySelector('button[type="submit"]');
-      if (!email) {
-        setLoginStatus("Enter your owner email address.", true);
-        return;
-      }
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Sending…";
-      }
-      setLoginStatus("Sending login link…", false);
-
-      fetch(SUPABASE_URL + "/auth/v1/otp", {
-        method: "POST",
-        headers: anonHeaders(),
-        body: JSON.stringify({
-          email: email,
-          options: { emailRedirectTo: adminRedirectUrl() }
-        })
-      })
-        .then(parseJsonResponse)
-        .then(function (result) {
-          if (result.ok) {
-            setLoginStatus(
-              "Check your email for a login link. Only owner emails can see inquiries.",
-              false
-            );
-          } else {
-            setLoginStatus(
-              friendlyAuthError(
-                result.data,
-                "Couldn’t send login link. Try again."
-              ),
-              true
-            );
-          }
-        })
-        .catch(function () {
-          setLoginStatus(
-            "Couldn’t send login link. Check your connection and try again.",
-            true
-          );
-        })
-        .finally(function () {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Send login link";
-          }
-        });
-    });
-  }
-
-  /* ---- Create password (signUp) ---- */
-  if (toggleCreatePassword) {
-    toggleCreatePassword.addEventListener("click", function () {
-      togglePanel(createPasswordPanel);
-      var mainEmail = document.getElementById("owner-email");
-      var signupEmail = document.getElementById("signup-email");
-      if (
-        createPasswordPanel &&
-        !createPasswordPanel.hidden &&
-        signupEmail &&
-        mainEmail &&
-        mainEmail.value &&
-        !signupEmail.value
-      ) {
-        signupEmail.value = mainEmail.value;
-      }
-    });
-  }
-
-  if (createPasswordForm) {
-    createPasswordForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var emailInput = document.getElementById("signup-email");
-      var passwordInput = document.getElementById("signup-password");
-      var confirmInput = document.getElementById("signup-password-confirm");
-      var email = (emailInput && emailInput.value.trim()) || "";
-      var password = (passwordInput && passwordInput.value) || "";
-      var confirm = (confirmInput && confirmInput.value) || "";
-      var submitBtn = createPasswordForm.querySelector('button[type="submit"]');
-
-      if (!email || !password) {
-        setLoginStatus("Enter an email and password to create an account.", true);
-        return;
-      }
-      if (password.length < 6) {
-        setLoginStatus("Password must be at least 6 characters.", true);
-        return;
-      }
-      if (password !== confirm) {
-        setLoginStatus("Passwords don’t match. Try again.", true);
-        return;
-      }
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Creating…";
-      }
-      if (!isOwnerEmail(email)) {
-        setLoginStatus(
-          "Note: that email isn’t on the owner list. Creating account anyway — inquiries stay owner-only (RLS).",
-          true
-        );
-      } else {
-        setLoginStatus("Creating password…", false);
-      }
-
-      fetch(SUPABASE_URL + "/auth/v1/signup", {
-        method: "POST",
-        headers: anonHeaders(),
-        body: JSON.stringify({ email: email, password: password })
-      })
-        .then(parseJsonResponse)
-        .then(function (result) {
-          if (!result.ok) {
-            setLoginStatus(
-              friendlyAuthError(
-                result.data,
-                "Couldn’t create password. Try again."
-              ),
-              true
-            );
-            return;
-          }
-
-          // Some projects return identities: [] when email already exists
-          var identities =
-            result.data &&
-            result.data.user &&
-            result.data.user.identities;
-          if (Array.isArray(identities) && identities.length === 0) {
-            setLoginStatus(
-              "That email already has an account. Sign in, or use Forgot password if you need a reset.",
-              true
-            );
-            return;
-          }
-
-          if (result.data && result.data.access_token) {
-            var session = sessionFromTokenResponse(result.data);
-            if (!session.user.email) session.user.email = email;
-            saveSession(session);
-            clearHash();
-            if (passwordInput) passwordInput.value = "";
-            if (confirmInput) confirmInput.value = "";
-            setLoginStatus("", false);
-            showInbox(session);
-            return;
-          }
-
-          setLoginStatus(
-            "Check your email to confirm, then sign in with your new password.",
-            false
-          );
-          if (passwordInput) passwordInput.value = "";
-          if (confirmInput) confirmInput.value = "";
-          hideAllAuthPanels();
-        })
-        .catch(function () {
-          setLoginStatus(
-            "Couldn’t create password. Check your connection and try again.",
-            true
-          );
-        })
-        .finally(function () {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Create password";
-          }
-        });
-    });
-  }
-
-  /* ---- Forgot password (recover) ---- */
-  if (toggleForgotPassword) {
-    toggleForgotPassword.addEventListener("click", function () {
-      togglePanel(forgotPasswordPanel);
-      var mainEmail = document.getElementById("owner-email");
-      var recoverEmail = document.getElementById("recover-email");
-      if (
-        forgotPasswordPanel &&
-        !forgotPasswordPanel.hidden &&
-        recoverEmail &&
-        mainEmail &&
-        mainEmail.value &&
-        !recoverEmail.value
-      ) {
-        recoverEmail.value = mainEmail.value;
-      }
-    });
-  }
-
-  if (forgotPasswordForm) {
-    forgotPasswordForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var emailInput = document.getElementById("recover-email");
-      var email = (emailInput && emailInput.value.trim()) || "";
-      var submitBtn = forgotPasswordForm.querySelector('button[type="submit"]');
-      if (!email) {
-        setLoginStatus("Enter your owner email to reset your password.", true);
-        return;
-      }
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Sending…";
-      }
-      setLoginStatus("Sending reset email…", false);
-
-      var recoverUrl =
-        SUPABASE_URL +
-        "/auth/v1/recover?redirect_to=" +
-        encodeURIComponent(adminRedirectUrl());
-
-      fetch(recoverUrl, {
-        method: "POST",
-        headers: anonHeaders(),
-        body: JSON.stringify({ email: email })
-      })
-        .then(parseJsonResponse)
-        .then(function (result) {
-          if (result.ok) {
-            setLoginStatus(
-              "Check your email for a password reset link, then return here to sign in.",
-              false
-            );
-            hideAllAuthPanels();
-          } else {
-            setLoginStatus(
-              friendlyAuthError(
-                result.data,
-                "Couldn’t send reset email. Try again."
-              ),
-              true
-            );
-          }
-        })
-        .catch(function () {
-          setLoginStatus(
-            "Couldn’t send reset email. Check your connection and try again.",
-            true
-          );
-        })
-        .finally(function () {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Send reset email";
-          }
-        });
-    });
-  }
-
-  if (signOutBtn) {
-    signOutBtn.addEventListener("click", function () {
-      clearSession();
-      hideAllAuthPanels();
-      showLogin("Signed out. Sign in with your owner email and password.");
-    });
-  }
-
-  ensureSession().then(function (session) {
-    if (session && session.access_token) {
-      showInbox(session);
-    } else {
-      showLogin("");
-      setLoginStatus("", false);
-    }
-  });
+  boot();
 })();

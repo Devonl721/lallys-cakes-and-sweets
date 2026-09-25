@@ -2,16 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Owner inbox — Lally's Cakes &amp; Sweets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Order board — Lally's Cakes &amp; Sweets</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="description" content="Owner inquiry inbox for Lally's Cakes &amp; Sweets." />
+  <meta name="description" content="Owner order board for Lally's Cakes &amp; Sweets." />
+  <meta name="theme-color" content="#fce4ec" />
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Nunito:wght@400;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="admin.css" />
 </head>
 <body class="admin-page">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -26,108 +28,273 @@
         </span>
       </a>
       <ul class="nav-links admin-nav">
-        <li><span class="admin-nav-label">Owner inbox</span></li>
-        <li><a href="index.html">← Back to site</a></li>
+        <li><span class="admin-nav-label">Order board</span></li>
+        <li><a href="index.html">← Site</a></li>
       </ul>
     </div>
   </header>
 
   <main id="main">
-    <div class="page-hero">
+    <div class="page-hero admin-hero" id="admin-hero">
       <div class="wrap">
         <span class="eyebrow">Private</span>
-        <h1>Owner inbox</h1>
-        <p>Sign in with an owner email to view and manage contact-form inquiries.</p>
+        <h1>Owner order board</h1>
+        <p>Sign in with an owner email to manage inquiries and orders.</p>
       </div>
     </div>
 
-    <section class="section section-tight">
-      <div class="wrap admin-wrap">
-        <!-- Logged out -->
+    <section class="section section-tight admin-section">
+      <!-- ============ Signed out ============ -->
+      <div class="wrap admin-wrap" id="admin-auth">
         <div id="admin-login" class="admin-panel form-card">
-          <h2 class="admin-panel-title">Owner sign in</h2>
-          <p class="form-hint">Sign in on this page with your owner email and password. Only owner emails can see inquiries.</p>
           <div id="login-status" class="form-success" role="status" aria-live="polite"></div>
 
-          <!-- Primary: email + password -->
-          <form id="login-form" novalidate>
-            <div class="form-group">
-              <label for="owner-email">Owner email</label>
-              <input type="email" id="owner-email" name="email" autocomplete="username" required placeholder="you@example.com" />
-            </div>
-            <div class="form-group">
-              <label for="owner-password">Password</label>
-              <input type="password" id="owner-password" name="password" autocomplete="current-password" required placeholder="Your password" />
-            </div>
-            <button type="submit" class="btn btn-primary">Sign in</button>
-          </form>
-
-          <div class="admin-auth-links">
-            <button type="button" id="toggle-magic-link" class="admin-text-btn">Email me a magic link instead</button>
-            <button type="button" id="toggle-create-password" class="admin-text-btn">Create password</button>
-            <button type="button" id="toggle-forgot-password" class="admin-text-btn">Forgot password?</button>
-          </div>
-
-          <!-- Magic-link fallback (hidden by default) -->
-          <div id="magic-link-panel" class="admin-auth-panel" hidden>
-            <h3 class="admin-auth-panel-title">Magic-link login</h3>
-            <p class="form-hint">We’ll email you a one-time login link. Only owner accounts can see inquiries.</p>
-            <form id="magic-link-form" novalidate>
+          <div id="signin-panel">
+            <h2 class="admin-panel-title">Owner sign in</h2>
+            <p class="form-hint">Only bakery owner emails can see orders.</p>
+            <form id="login-form" novalidate>
               <div class="form-group">
-                <label for="magic-email">Owner email</label>
-                <input type="email" id="magic-email" name="email" autocomplete="email" required placeholder="you@example.com" />
+                <label for="owner-email">Owner email</label>
+                <input type="email" id="owner-email" name="email" autocomplete="username" inputmode="email" required placeholder="you@example.com" />
               </div>
-              <button type="submit" class="btn btn-secondary">Send login link</button>
+              <div class="form-group">
+                <label for="owner-password">Password</label>
+                <input type="password" id="owner-password" name="password" autocomplete="current-password" required placeholder="Your password" />
+              </div>
+              <button type="submit" class="btn btn-primary">Sign in</button>
             </form>
+
+            <div class="admin-auth-links">
+              <button type="button" id="toggle-forgot-password" class="admin-text-btn" aria-expanded="false" aria-controls="forgot-password-panel">Forgot password?</button>
+            </div>
+
+            <div id="forgot-password-panel" class="admin-auth-panel" hidden>
+              <h3 class="admin-auth-panel-title">Reset your password</h3>
+              <p class="form-hint">We’ll email you a link. It brings you back here to choose a new password.</p>
+              <form id="forgot-password-form" novalidate>
+                <div class="form-group">
+                  <label for="recover-email">Owner email</label>
+                  <input type="email" id="recover-email" name="email" autocomplete="email" inputmode="email" required placeholder="you@example.com" />
+                </div>
+                <button type="submit" class="btn btn-secondary">Send reset email</button>
+              </form>
+            </div>
           </div>
 
-          <!-- Create password / first-time signup -->
-          <div id="create-password-panel" class="admin-auth-panel" hidden>
-            <h3 class="admin-auth-panel-title">Create password</h3>
-            <p class="form-hint">First time? Set a password for your owner email. You may need to confirm via email before signing in.</p>
-            <form id="create-password-form" novalidate>
+          <!-- Shown after following a password-reset email link -->
+          <div id="reset-panel" hidden>
+            <h2 class="admin-panel-title">Choose a new password</h2>
+            <p class="form-hint">Setting a new password for <strong id="reset-email"></strong>.</p>
+            <form id="reset-password-form" novalidate>
               <div class="form-group">
-                <label for="signup-email">Owner email</label>
-                <input type="email" id="signup-email" name="email" autocomplete="username" required placeholder="you@example.com" />
+                <label for="new-password">New password</label>
+                <input type="password" id="new-password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters" />
               </div>
               <div class="form-group">
-                <label for="signup-password">Password</label>
-                <input type="password" id="signup-password" name="password" autocomplete="new-password" required minlength="6" placeholder="Choose a password" />
+                <label for="new-password-confirm">Confirm new password</label>
+                <input type="password" id="new-password-confirm" autocomplete="new-password" minlength="8" required placeholder="Type it again" />
               </div>
-              <div class="form-group">
-                <label for="signup-password-confirm">Confirm password</label>
-                <input type="password" id="signup-password-confirm" name="password_confirm" autocomplete="new-password" required minlength="6" placeholder="Confirm password" />
-              </div>
-              <button type="submit" class="btn btn-secondary">Create password</button>
-            </form>
-          </div>
-
-          <!-- Forgot password -->
-          <div id="forgot-password-panel" class="admin-auth-panel" hidden>
-            <h3 class="admin-auth-panel-title">Forgot password?</h3>
-            <p class="form-hint">We’ll email you a link to reset your password.</p>
-            <form id="forgot-password-form" novalidate>
-              <div class="form-group">
-                <label for="recover-email">Owner email</label>
-                <input type="email" id="recover-email" name="email" autocomplete="email" required placeholder="you@example.com" />
-              </div>
-              <button type="submit" class="btn btn-secondary">Send reset email</button>
+              <button type="submit" class="btn btn-primary">Save new password</button>
             </form>
           </div>
         </div>
+      </div>
 
-        <!-- Logged in -->
-        <div id="admin-inbox" class="admin-inbox" hidden>
-          <div class="admin-toolbar">
-            <p class="admin-signed-in">Signed in as <strong id="signed-in-email"></strong></p>
-            <button type="button" id="sign-out-btn" class="btn btn-secondary">Sign out</button>
+      <!-- ============ Signed in ============ -->
+      <div class="board-wrap" id="admin-app" hidden>
+        <div class="admin-toolbar">
+          <p class="admin-signed-in">Signed in as <strong id="signed-in-email"></strong></p>
+          <div class="admin-toolbar-actions">
+            <button type="button" id="refresh-btn" class="btn btn-secondary btn-sm" title="Reload orders" aria-label="Reload orders">↻</button>
+            <button type="button" id="add-order-btn" class="btn btn-primary btn-sm">+ Add order</button>
+            <button type="button" id="sign-out-btn" class="btn btn-secondary btn-sm">Sign out</button>
           </div>
-          <div id="inbox-status" class="admin-alert" role="status" aria-live="polite"></div>
-          <div id="inquiry-list" class="inquiry-list"></div>
+        </div>
+
+        <div id="app-status" class="admin-alert" role="status" aria-live="polite"></div>
+
+        <div class="summary-row" id="summary-row">
+          <button type="button" class="summary-card" data-summary="new">
+            <span class="summary-num" id="sum-new">–</span>
+            <span class="summary-label">New inquiries</span>
+          </button>
+          <button type="button" class="summary-card" data-summary="week">
+            <span class="summary-num" id="sum-week">–</span>
+            <span class="summary-label">Due this week</span>
+            <span class="summary-sub" id="sum-week-sub"></span>
+          </button>
+          <button type="button" class="summary-card" data-summary="unpaid">
+            <span class="summary-num" id="sum-unpaid">–</span>
+            <span class="summary-label">Unpaid deposits</span>
+          </button>
+        </div>
+
+        <div class="view-bar">
+          <div class="view-tabs" role="tablist" aria-label="Views">
+            <button type="button" role="tab" class="view-tab" data-view="board" aria-selected="true">Board</button>
+            <button type="button" role="tab" class="view-tab" data-view="list" aria-selected="false">List</button>
+            <button type="button" role="tab" class="view-tab" data-view="week" aria-selected="false">This week</button>
+          </div>
+          <label class="toggle-inline">
+            <input type="checkbox" id="show-closed" />
+            <span>Show declined &amp; archived</span>
+          </label>
+        </div>
+
+        <!-- Board -->
+        <div id="view-board" class="view" role="tabpanel">
+          <nav class="stage-jump" id="stage-jump" aria-label="Jump to stage"></nav>
+          <div class="board" id="board"></div>
+        </div>
+
+        <!-- List -->
+        <div id="view-list" class="view" role="tabpanel" hidden>
+          <div class="list-controls">
+            <input type="search" id="list-search" placeholder="Search name, phone, email, details…" aria-label="Search orders" />
+            <select id="list-filter" aria-label="Filter by stage"></select>
+            <select id="list-sort" aria-label="Sort">
+              <option value="pickup">Pickup date (soonest)</option>
+              <option value="created">Newest first</option>
+            </select>
+          </div>
+          <p class="list-count" id="list-count"></p>
+          <div class="order-list" id="order-list"></div>
+        </div>
+
+        <!-- Due this week -->
+        <div id="view-week" class="view" role="tabpanel" hidden>
+          <div id="week-list" class="week-list"></div>
         </div>
       </div>
     </section>
   </main>
+
+  <!-- ============ Order detail / edit ============ -->
+  <div class="modal-backdrop" id="order-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <form id="order-form" novalidate>
+        <header class="modal-head">
+          <div>
+            <p class="modal-eyebrow" id="modal-eyebrow">Order</p>
+            <h2 id="modal-title">Order</h2>
+          </div>
+          <button type="button" class="modal-close" data-close aria-label="Close">×</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="contact-quick" id="contact-quick"></div>
+
+          <div class="field-grid pair">
+            <div class="form-group">
+              <label for="f-status">Stage</label>
+              <select id="f-status" name="status"></select>
+            </div>
+            <div class="form-group">
+              <label for="f-source">Source</label>
+              <select id="f-source" name="source" data-new-col>
+                <option value="website">Website form</option>
+                <option value="phone">Phone</option>
+                <option value="facebook">Facebook</option>
+                <option value="in_person">In person</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="f-name">Customer name</label>
+            <input type="text" id="f-name" name="name" autocomplete="off" required />
+          </div>
+          <div class="field-grid">
+            <div class="form-group">
+              <label for="f-phone">Phone</label>
+              <input type="tel" id="f-phone" name="phone" autocomplete="off" inputmode="tel" />
+            </div>
+            <div class="form-group">
+              <label for="f-email">Email</label>
+              <input type="email" id="f-email" name="email" autocomplete="off" inputmode="email" />
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="form-group">
+              <label for="f-event-type">Event type</label>
+              <input type="text" id="f-event-type" name="event_type" list="event-types" placeholder="Birthday, wedding…" data-new-col />
+              <datalist id="event-types">
+                <option value="Birthday"></option>
+                <option value="Wedding"></option>
+                <option value="Baby shower"></option>
+                <option value="Bridal shower"></option>
+                <option value="Graduation"></option>
+                <option value="Anniversary"></option>
+                <option value="Holiday"></option>
+                <option value="Just because"></option>
+              </datalist>
+            </div>
+            <div class="form-group">
+              <label for="f-event-date">Event date (from customer)</label>
+              <input type="text" id="f-event-date" name="event_date" placeholder="YYYY-MM-DD" />
+            </div>
+          </div>
+
+          <div class="field-grid pair">
+            <div class="form-group">
+              <label for="f-pickup-date">Pickup date</label>
+              <input type="date" id="f-pickup-date" name="pickup_date" data-new-col />
+            </div>
+            <div class="form-group">
+              <label for="f-pickup-time">Pickup time</label>
+              <input type="time" id="f-pickup-time" name="pickup_time" data-new-col />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="f-items">Order details / items</label>
+            <textarea id="f-items" name="items" rows="3" placeholder="e.g. 8&quot; two-tier vanilla, pink buttercream, 24 cupcakes" data-new-col></textarea>
+          </div>
+
+          <div class="money-box">
+            <div class="field-grid pair">
+              <div class="form-group">
+                <label for="f-price">Quoted price ($)</label>
+                <input type="number" id="f-price" name="price" min="0" step="0.01" inputmode="decimal" placeholder="0.00" data-new-col />
+              </div>
+              <div class="form-group">
+                <label for="f-deposit-amount">Deposit amount ($)</label>
+                <input type="number" id="f-deposit-amount" name="deposit_amount" min="0" step="0.01" inputmode="decimal" placeholder="0.00" data-new-col />
+              </div>
+            </div>
+            <div class="check-row">
+              <label class="check"><input type="checkbox" id="f-deposit-paid" name="deposit_paid" data-new-col /> Deposit paid</label>
+              <label class="check"><input type="checkbox" id="f-paid-full" name="paid_in_full" data-new-col /> Paid in full</label>
+              <label class="check check-priority"><input type="checkbox" id="f-priority" name="priority" data-new-col /> ★ Priority</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="f-notes">Internal notes <span class="label-note">(owners only)</span></label>
+            <textarea id="f-notes" name="notes" rows="3" placeholder="Private notes — customers never see these"></textarea>
+          </div>
+
+          <div class="customer-message" id="customer-message" hidden>
+            <h3>Original customer message</h3>
+            <p id="customer-message-text"></p>
+          </div>
+
+          <p class="modal-meta" id="modal-meta"></p>
+        </div>
+
+        <footer class="modal-foot">
+          <button type="button" class="btn btn-secondary btn-sm" id="archive-btn">Archive</button>
+          <span class="modal-foot-spacer"></span>
+          <button type="button" class="btn btn-secondary btn-sm" data-close>Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="save-order-btn">Save</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <footer class="site-footer">
     <div class="footer-bottom">© 2026 Lally's Cakes &amp; Sweets · Owner tools</div>

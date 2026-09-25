@@ -305,6 +305,20 @@
   }
   function isOpen(r) { return OPEN_STAGES.indexOf(r.status) !== -1; }
   function needsDeposit(r) { return DEPOSIT_STAGES.indexOf(r.status) !== -1 && !r.deposit_paid && !r.paid_in_full; }
+  /** Balance due at pickup, or null when no price has been set. */
+  function balanceDue(r) {
+    if (r.price === null || r.price === undefined || r.price === "" || isNaN(+r.price)) return null;
+    if (r.paid_in_full) return 0;
+    var paid = r.deposit_paid && r.deposit_amount ? +r.deposit_amount : 0;
+    return Math.max(0, Math.round((+r.price - paid) * 100) / 100);
+  }
+  function balanceLine(r) {
+    var b = balanceDue(r);
+    if (b === null || r.status === "declined" || r.status === "archived") return null;
+    if (b === 0) return h("div", { class: "card-balance is-paid", text: "Paid in full · $0 due" });
+    return h("div", { class: "card-balance" + (r.status === "completed" ? " is-late" : "") },
+      (r.status === "completed" ? "Still owed: " : "Due at pickup: "), h("b", { text: money(b) }));
+  }
   function summaryText(r) {
     var bits = [];
     if (r.items) return r.items;
@@ -524,6 +538,7 @@
       ),
       h("div", { class: "card-due " + due.cls, text: due.text }),
       summaryText(r) ? h("p", { class: "card-summary", text: preview(summaryText(r), 110) }) : null,
+      balanceLine(r),
       h("div", { class: "card-badges" },
         opts.showStage ? h("span", { class: "badge stage-badge stage-" + r.status, text: stage(r.status).short }) : null,
         depositBadge(r),
@@ -674,12 +689,33 @@
         })
       });
     }
+    var weekOrders = 0, weekDue = 0;
+    groups.forEach(function (g) {
+      g.due = 0;
+      g.rows.forEach(function (r) {
+        if (!isOpen(r)) return;
+        var b = balanceDue(r);
+        if (b) g.due += b;
+      });
+      if (g.key !== "overdue") {
+        weekOrders += g.rows.filter(isOpen).length;
+        weekDue += g.due;
+      }
+    });
+    box.appendChild(h("div", { class: "week-summary" },
+      h("div", { class: "week-summary-text" },
+        h("strong", { text: weekOrders + (weekOrders === 1 ? " order" : " orders") + " due this week" }),
+        h("span", { text: " · " + money(Math.round(weekDue * 100) / 100 || 0) + " to collect at pickup" })
+      ),
+      h("button", { type: "button", class: "btn btn-secondary btn-sm", onclick: function () { openPrintChooser(); } }, "🖨 Print prep list")
+    ));
     groups.forEach(function (g) {
       var sorted = sortRows(g.rows, "pickup");
       var sec = h("section", { class: "week-day" + (g.key === "overdue" ? " week-overdue" : "") + (g.key === today ? " week-today" : "") },
         h("header", { class: "week-head" },
           h("h3", { text: g.title }),
           h("span", { class: "week-sub", text: g.sub }),
+          g.due ? h("span", { class: "week-due", text: money(Math.round(g.due * 100) / 100) + " due" }) : null,
           h("span", { class: "column-count", text: String(sorted.length) })
         )
       );
@@ -691,8 +727,9 @@
     });
   }
 
-  function setView(v) {
+  function setView(v, remember) {
     state.view = v;
+    if (remember) state.viewChosen = true;
     document.querySelectorAll(".view-tab").forEach(function (t) {
       t.setAttribute("aria-selected", t.dataset.view === v ? "true" : "false");
     });
@@ -704,15 +741,21 @@
   }
 
   function savePrefs() {
-    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ view: state.view, showClosed: state.showClosed, listSort: state.listSort })); } catch (e) {}
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({
+        view: state.viewChosen ? state.view : null, showClosed: state.showClosed, listSort: state.listSort
+      }));
+    } catch (e) {}
   }
+  function isPhone() { return !!(window.matchMedia && window.matchMedia("(max-width: 700px)").matches); }
   function loadPrefs() {
     try {
       var p = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
-      if (p.view) state.view = p.view;
+      if (p.view === "board" || p.view === "list" || p.view === "week") { state.view = p.view; state.viewChosen = true; }
+      else state.view = isPhone() ? "week" : "board";
       state.showClosed = !!p.showClosed;
       if (p.listSort) state.listSort = p.listSort;
-    } catch (e) {}
+    } catch (e) { state.view = isPhone() ? "week" : "board"; }
   }
 
   /* ---------------- Modal ---------------- */
@@ -769,6 +812,7 @@
     });
 
     renderContactQuick();
+    renderModalBalance();
     var msgBox = $("customer-message");
     msgBox.hidden = !r.message;
     $("customer-message-text").textContent = r.message || "";
@@ -803,10 +847,26 @@
     }
     box.hidden = !box.firstChild;
   }
+  function renderModalBalance() {
+    var el = $("modal-balance");
+    var b = balanceDue({
+      price: F.price.value === "" ? null : +F.price.value,
+      deposit_paid: F.deposit_paid.checked,
+      deposit_amount: F.deposit_amount.value === "" ? null : +F.deposit_amount.value,
+      paid_in_full: F.paid_in_full.checked
+    });
+    clear(el);
+    if (b === null) { el.hidden = true; return; }
+    el.hidden = false;
+    el.classList.toggle("is-paid", b === 0);
+    append(el, b === 0 ? ["Balance due: ", h("b", { text: "$0" }), " · Paid in full"] : ["Balance due at pickup: ", h("b", { text: money(b) })]);
+  }
+  [F.price, F.deposit_amount].forEach(function (i) { i.addEventListener("input", renderModalBalance); });
+  [F.deposit_paid, F.paid_in_full].forEach(function (i) { i.addEventListener("change", renderModalBalance); });
   F.phone.addEventListener("input", renderContactQuick);
   F.email.addEventListener("input", renderContactQuick);
-  F.paid_in_full.addEventListener("change", function () { if (F.paid_in_full.checked) F.deposit_paid.checked = true; });
-  F.deposit_amount.addEventListener("input", function () { if (F.deposit_amount.value && +F.deposit_amount.value > 0) F.deposit_paid.checked = true; });
+  F.paid_in_full.addEventListener("change", function () { if (F.paid_in_full.checked) F.deposit_paid.checked = true; renderModalBalance(); });
+  F.deposit_amount.addEventListener("input", function () { if (F.deposit_amount.value && +F.deposit_amount.value > 0) F.deposit_paid.checked = true; renderModalBalance(); });
 
   function closeModal() {
     modal.hidden = true;
@@ -888,6 +948,119 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !modal.hidden) closeModal();
   });
+
+  /* ---------------- Printable prep list ---------------- */
+  var PRINT_STAGES = ["confirmed", "baking", "ready"];
+  var printModal = $("print-modal");
+
+  function openPrintChooser() {
+    printModal.hidden = false;
+    document.body.classList.add("modal-open");
+    var checked = printModal.querySelector('input[name="print-range"]:checked');
+    setTimeout(function () { (checked || printModal.querySelector("input")).focus(); }, 30);
+  }
+  function closePrintChooser() {
+    printModal.hidden = true;
+    if (modal.hidden) document.body.classList.remove("modal-open");
+  }
+
+  function buildPrintSheet(range, includeEarly) {
+    var sheet = $("print-sheet");
+    clear(sheet);
+    var today = todayISO();
+    var days = range === "today" ? [today] : range === "tomorrow" ? [addDays(today, 1)] :
+      [0, 1, 2, 3, 4, 5, 6].map(function (n) { return addDays(today, n); });
+    var stages = includeEarly ? PRINT_STAGES.concat(["new", "contacted"]) : PRINT_STAGES;
+    var wanted = function (r) { return stages.indexOf(r.status) !== -1; };
+
+    var groups = [];
+    if (range !== "tomorrow") {
+      var overdue = state.rows.filter(function (r) { var d = dueDate(r); return wanted(r) && d && d < today; });
+      if (overdue.length) groups.push({ title: "Overdue — not picked up yet", rows: overdue });
+    }
+    days.forEach(function (d, i) {
+      var label = d === today ? "Today" : d === addDays(today, 1) ? "Tomorrow" : "";
+      groups.push({
+        title: (label ? label + " — " : "") + fmtDay(d, { weekday: "long", month: "long" }),
+        rows: state.rows.filter(function (r) { return wanted(r) && dueDate(r) === d; })
+      });
+    });
+
+    var rangeLabel = range === "today" ? "Today" : range === "tomorrow" ? "Tomorrow" : "This week";
+    var total = 0, count = 0;
+    groups.forEach(function (g) { g.rows.forEach(function (r) { count++; total += balanceDue(r) || 0; }); });
+
+    sheet.appendChild(h("header", { class: "ps-head" },
+      h("div", {},
+        h("div", { class: "ps-brand", text: "Lally’s Cakes & Sweets" }),
+        h("h1", { text: "Prep list · " + rangeLabel })
+      ),
+      h("div", { class: "ps-meta" },
+        h("div", { text: count + (count === 1 ? " order" : " orders") + " · " + money(Math.round(total * 100) / 100 || 0) + " to collect" }),
+        h("div", { text: "Printed " + fmtStamp(new Date().toISOString()) })
+      )
+    ));
+
+    groups.forEach(function (g) {
+      var sec = h("section", { class: "ps-day" }, h("h2", { text: g.title }));
+      if (!g.rows.length) { sec.appendChild(h("p", { class: "ps-empty", text: "No orders." })); sheet.appendChild(sec); return; }
+      var tbody = h("tbody");
+      sortRows(g.rows, "pickup").forEach(function (r) {
+        var b = balanceDue(r);
+        var details = [r.items || "", r.event_type && !r.items ? r.event_type : ""].filter(Boolean).join(" · ") ||
+          preview(r.message, 180) || "—";
+        tbody.appendChild(h("tr", {},
+          h("td", { class: "ps-check" }, h("span", { class: "ps-box", "aria-hidden": "true" })),
+          h("td", { class: "ps-time", text: fmtTime(r.pickup_time) || "—" }),
+          h("td", { class: "ps-cust" },
+            h("strong", { text: (r.priority ? "★ " : "") + (r.name || "—") }),
+            r.phone ? h("div", { text: r.phone }) : null,
+            h("div", { class: "ps-stage", text: stage(r.status).label })
+          ),
+          h("td", { class: "ps-items" },
+            h("div", { text: details }),
+            r.notes ? h("div", { class: "ps-notes" }, h("b", { text: "Notes: " }), r.notes) : null
+          ),
+          h("td", { class: "ps-money", text: r.price !== null && r.price !== undefined && r.price !== "" ? money(r.price) : "—" }),
+          h("td", { class: "ps-money ps-bal", text: b === null ? "—" : b === 0 ? "Paid" : money(b) })
+        ));
+      });
+      sec.appendChild(h("table", { class: "ps-table" },
+        h("thead", {}, h("tr", {},
+          h("th", { class: "ps-check", text: "✓" }), h("th", { text: "Time" }), h("th", { text: "Customer" }),
+          h("th", { text: "Items / details" }), h("th", { class: "ps-money", text: "Price" }), h("th", { class: "ps-money", text: "Balance" })
+        )),
+        tbody
+      ));
+      sheet.appendChild(sec);
+    });
+    return sheet;
+  }
+
+  function printPrepList(range, includeEarly) {
+    buildPrintSheet(range, includeEarly);
+    closePrintChooser();
+    document.body.classList.add("print-prep");
+    var done = function () {
+      document.body.classList.remove("print-prep");
+      window.removeEventListener("afterprint", done);
+    };
+    window.addEventListener("afterprint", done);
+    setTimeout(function () { window.print(); }, 50);
+  }
+
+  $("print-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var range = (printModal.querySelector('input[name="print-range"]:checked') || {}).value || "today";
+    printPrepList(range, $("print-include-early").checked);
+  });
+  printModal.addEventListener("click", function (e) {
+    if (e.target === printModal || e.target.closest("[data-close-print]")) closePrintChooser();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !printModal.hidden) closePrintChooser();
+  });
+  $("print-btn").addEventListener("click", openPrintChooser);
 
   /* ---------------- App shell ---------------- */
   function showLogin(message, isError) {
@@ -1029,7 +1202,7 @@
     openModal("new");
   });
   document.querySelectorAll(".view-tab").forEach(function (t) {
-    t.addEventListener("click", function () { setView(t.dataset.view); });
+    t.addEventListener("click", function () { setView(t.dataset.view, true); });
   });
   $("show-closed").addEventListener("change", function (e) { state.showClosed = e.target.checked; savePrefs(); renderAll(); });
   $("list-search").addEventListener("input", function (e) { state.search = e.target.value; renderList(); });
@@ -1038,11 +1211,11 @@
   document.querySelectorAll("[data-summary]").forEach(function (b) {
     b.addEventListener("click", function () {
       var k = b.dataset.summary;
-      if (k === "week") { setView("week"); return; }
+      if (k === "week") { setView("week", true); return; }
       state.listFilter = k === "new" ? "new" : "unpaid";
       state.search = ""; $("list-search").value = "";
       fillListFilter();
-      setView("list");
+      setView("list", true);
     });
   });
   // Refresh when the owner comes back to the tab/app (keeps phone view fresh).

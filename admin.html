@@ -106,6 +106,7 @@
           <p class="admin-signed-in">Signed in as <strong id="signed-in-email"></strong></p>
           <div class="admin-toolbar-actions">
             <button type="button" id="refresh-btn" class="btn btn-secondary btn-sm" title="Reload orders" aria-label="Reload orders">↻</button>
+            <button type="button" id="print-btn" class="btn btn-secondary btn-sm" title="Print prep list" aria-label="Print prep list">🖨<span class="btn-label"> Prep list</span></button>
             <button type="button" id="add-order-btn" class="btn btn-primary btn-sm">+ Add order</button>
             <button type="button" id="sign-out-btn" class="btn btn-secondary btn-sm">Sign out</button>
           </div>
@@ -269,6 +270,7 @@
               <label class="check"><input type="checkbox" id="f-paid-full" name="paid_in_full" data-new-col /> Paid in full</label>
               <label class="check check-priority"><input type="checkbox" id="f-priority" name="priority" data-new-col /> ★ Priority</label>
             </div>
+            <p class="modal-balance" id="modal-balance" aria-live="polite" hidden></p>
           </div>
 
           <div class="form-group">
@@ -293,6 +295,39 @@
       </form>
     </div>
   </div>
+
+  <!-- ============ Print prep list chooser ============ -->
+  <div class="modal-backdrop" id="print-modal" hidden>
+    <div class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="print-title">
+      <form id="print-form">
+        <header class="modal-head">
+          <div>
+            <p class="modal-eyebrow">Print</p>
+            <h2 id="print-title">Prep list</h2>
+          </div>
+          <button type="button" class="modal-close" data-close-print aria-label="Close">×</button>
+        </header>
+        <div class="modal-body">
+          <fieldset class="print-range">
+            <legend>Which orders?</legend>
+            <label class="range-opt"><input type="radio" name="print-range" value="today" checked /> Today</label>
+            <label class="range-opt"><input type="radio" name="print-range" value="tomorrow" /> Tomorrow</label>
+            <label class="range-opt"><input type="radio" name="print-range" value="week" /> This week</label>
+          </fieldset>
+          <label class="check"><input type="checkbox" id="print-include-early" /> Also include New / Quoted (not yet confirmed)</label>
+          <p class="form-hint">Lists confirmed, baking and ready orders by pickup day and time, with a checkbox for each.</p>
+        </div>
+        <footer class="modal-foot">
+          <span class="modal-foot-spacer"></span>
+          <button type="button" class="btn btn-secondary btn-sm" data-close-print>Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">🖨 Print</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Filled in right before printing -->
+  <div id="print-sheet" class="print-sheet" aria-hidden="true"></div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 

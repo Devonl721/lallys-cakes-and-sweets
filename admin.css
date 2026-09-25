@@ -548,3 +548,108 @@ body.modal-open { overflow: hidden; }
 body.can-drag .board .card-stage { display: none; }
 body.can-drag .board .card-step-next { margin-left: auto; }
 body.modal-open .toast { bottom: 5.25rem; }
+
+/* —— Balance due —— */
+.card-balance {
+  margin-top: 0.4rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--plum-soft);
+}
+.card-balance b { color: var(--burgundy); font-weight: 800; }
+.card-balance.is-paid { color: #2e7d32; }
+.card-balance.is-late b { color: var(--burgundy); text-decoration: underline; }
+.modal-balance {
+  margin: 0.55rem 0 0.1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--blush-soft);
+  font-weight: 700;
+  color: var(--plum);
+}
+.modal-balance b { color: var(--burgundy); font-size: 1.05rem; }
+.modal-balance.is-paid { background: rgba(46, 125, 50, 0.12); color: #2e7d32; }
+.modal-balance.is-paid b { color: #2e7d32; }
+
+.week-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  background: var(--card);
+  border: 1px solid rgba(194, 24, 91, 0.1);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 0.75rem 0.9rem;
+}
+.week-summary-text { font-size: 0.95rem; color: var(--plum-soft); }
+.week-summary-text strong { color: var(--plum); }
+.week-due {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--burgundy);
+  background: var(--blush-soft);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+}
+
+/* —— Print chooser —— */
+.modal-small { max-width: 420px; }
+.print-range { border: 0; padding: 0; margin: 0 0 0.8rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.print-range legend { font-weight: 800; margin-bottom: 0.5rem; padding: 0; }
+.range-opt {
+  flex: 1 1 7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0.8rem;
+  border: 1.5px solid var(--accent-soft);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-weight: 800;
+  cursor: pointer;
+}
+.range-opt:has(input:checked) { border-color: var(--magenta); background: var(--blush-soft); }
+.range-opt input { accent-color: var(--magenta); width: 1.1rem; height: 1.1rem; }
+@media (max-width: 720px) {
+  #print-modal { align-items: center; padding: 1rem; }
+  #print-modal .modal { height: auto; border-radius: var(--radius); }
+  #print-btn { padding-inline: 0.8rem; }
+  #print-btn .btn-label { display: none; }
+}
+
+/* —— Printed prep list —— */
+.print-sheet { display: none; }
+@media print {
+  @page { margin: 12mm; }
+  body.print-prep { background: #fff !important; color: #000; font-size: 11pt; }
+  body.print-prep > *:not(#print-sheet) { display: none !important; }
+  body.print-prep #print-sheet { display: block !important; }
+  .print-sheet, .print-sheet * { color: #000 !important; background: transparent !important; box-shadow: none !important; }
+  .ps-head {
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem;
+    border-bottom: 2px solid #000; padding-bottom: 6pt; margin-bottom: 8pt;
+  }
+  .ps-brand { font-family: var(--font-display); font-size: 16pt; font-weight: 700; }
+  .ps-head h1 { font-family: var(--font-body); font-size: 12pt; margin: 2pt 0 0; font-weight: 800; }
+  .ps-meta { text-align: right; font-size: 9pt; }
+  .ps-day { margin-top: 10pt; break-inside: auto; }
+  .ps-day h2 {
+    font-family: var(--font-display); font-size: 13pt; margin: 0 0 4pt;
+    border-bottom: 1px solid #000; padding-bottom: 2pt; break-after: avoid;
+  }
+  .ps-empty { margin: 2pt 0 6pt; font-style: italic; font-size: 10pt; }
+  .ps-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  .ps-table th { text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #000; padding: 3pt 4pt; }
+  .ps-table td { vertical-align: top; padding: 5pt 4pt; border-bottom: 1px solid #999; }
+  .ps-table tr { break-inside: avoid; }
+  .ps-check { width: 18pt; }
+  .ps-box { display: inline-block; width: 12pt; height: 12pt; border: 1.5px solid #000; }
+  .ps-time { width: 52pt; white-space: nowrap; font-weight: 700; }
+  .ps-cust { width: 120pt; }
+  .ps-stage { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.04em; }
+  .ps-notes { margin-top: 2pt; font-size: 9pt; font-style: italic; }
+  .ps-money { width: 48pt; text-align: right; white-space: nowrap; }
+  .ps-bal { font-weight: 800; }
+}

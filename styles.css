@@ -340,6 +340,17 @@ main {
   margin-top: 1.75rem;
 }
 
+/* Google review prompt (home "Why us" section) */
+.review-lead {
+  color: var(--muted);
+  max-width: 36rem;
+  margin: 2rem 0 0;
+}
+
+.review-lead + .btn-row {
+  margin-top: 1rem;
+}
+
 /* —— Hero —— */
 .hero {
   position: relative;

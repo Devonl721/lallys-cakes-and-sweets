@@ -1,0 +1,17 @@
+{
+  "events": [
+    {
+      "id": "trunk-or-treat-2026",
+      "title": "Trunk or Treat",
+      "start": "2026-10-25T16:00:00-04:00",
+      "end": "2026-10-25T18:00:00-04:00",
+      "location_name": "Shillington Farmers Market",
+      "address": "10 S Summit Ave, Shillington, PA 19607",
+      "summary": "A fun, family-friendly Halloween event.",
+      "image": "images/events/trunk-or-treat.jpg",
+      "image_alt": "Halloween illustration of kids in costumes trick-or-treating from decorated car trunks",
+      "cta_label": "Message us on Messenger",
+      "cta_url": "https://m.me/LallysCakesandSweets"
+    }
+  ]
+}

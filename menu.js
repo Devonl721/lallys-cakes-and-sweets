@@ -30,6 +30,13 @@
       .trim();
   }
 
+  // Category heading thumbnails (images/menu). Only categories the photo truly shows.
+  var THUMBS = {
+    "custom-orders": { file: "a-celebration-cake" },
+    "cupcakes-cakes": { file: "b-cupcakes" },
+    "pies-pastries": { file: "c-dumplings" }
+  };
+
   var sections = [];
   var cards = [];
 
@@ -44,6 +51,26 @@
 
       var h = el("h2", "menu-category-title", cat.name);
       h.id = "h-" + cat.id;
+      var thumb = THUMBS[cat.id];
+      if (thumb) {
+        // Small photo beside the heading, only where the photo truly matches the category.
+        var pic = document.createElement("picture");
+        var src = document.createElement("source");
+        src.type = "image/webp";
+        src.srcset = "images/menu/" + thumb.file + "-160.webp";
+        pic.appendChild(src);
+        var img = document.createElement("img");
+        img.className = "menu-category-thumb";
+        img.src = "images/menu/" + thumb.file + "-160.jpg";
+        img.width = 160;
+        img.height = 160;
+        img.loading = "lazy";
+        img.decoding = "async";
+        img.alt = ""; // decorative: the heading text already names the category
+        pic.appendChild(img);
+        h.classList.add("has-thumb");
+        h.insertBefore(pic, h.firstChild);
+      }
       sec.appendChild(h);
 
       var grid = el("div", "menu-grid");

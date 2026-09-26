@@ -12,7 +12,7 @@
  *   node tools/build-events.js --now=2026-10-26T00:00:00-04:00   # testing
  *
  * Markers (the builder only replaces what is between them):
- *   index.html : <!-- EVENTS:HOME:START --> ... <!-- EVENTS:HOME:END -->
+ *   index.html : <!-- EVENTS:HOME:START --> ... <!-- EVENTS:HOME:END -->  (slim banner under the header)
  *                <!-- EVENTS:JSONLD:START --> ... <!-- EVENTS:JSONLD:END -->
  *   events.html: <!-- EVENTS:LIST:START --> ... <!-- EVENTS:LIST:END -->
  *                <!-- EVENTS:JSONLD:START --> ... <!-- EVENTS:JSONLD:END -->
@@ -124,30 +124,29 @@ function directionsUrl(ev) {
 }
 
 // ---------- markup ----------
+// "Sun Oct 25"
+function shortDateLabel(ev) {
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short', month: 'short', day: 'numeric' });
+  const p = {};
+  for (const x of fmt.formatToParts(new Date(ev.start))) p[x.type] = x.value;
+  return p.weekday + ' ' + p.month + ' ' + p.day;
+}
+
+// Slim pink banner just under the header on the home page (whole banner is one link).
+// Emits nothing when there is no upcoming event.
 function homeBox(ev) {
   if (!ev) return '';
   return `
-          <aside class="season-card" aria-labelledby="season-title">
-            <div class="season-thumb">${picture(ev, 'season-img', { lazy: false })}</div>
-            <div class="season-body">
-              <p class="season-eyebrow">This season</p>
-              <h2 class="season-title" id="season-title">${esc(ev.title)}</h2>
-              <p class="season-when">Special event · ${esc(dateLabel(ev, false))} · ${esc(timeLabel(ev))}</p>
-              <p class="season-where">At ${esc(ev.location_name)}</p>
-              <div class="season-actions">
-                <a class="btn btn-secondary" href="events.html#${esc(ev.id)}">Details</a>
-                <a class="btn btn-facebook" href="${esc(ev.cta_url)}" target="_blank" rel="noopener noreferrer">${esc(ev.cta_label)}</a>
-              </div>
-            </div>
-          </aside>
-          `;
+    <a class="season-banner" href="events.html#${esc(ev.id)}">
+      <span class="season-banner-text"><strong>${esc(ev.title)}</strong> · ${esc(shortDateLabel(ev))}, ${esc(timeLabel(ev))} · <span class="season-banner-cta">Details</span></span>
+    </a>
+    `;
 }
 
 function eventCard(ev) {
   const notes = ev.notes ? `\n              <p class="event-notes">${esc(ev.notes)}</p>` : '';
   return `
           <article class="event-card" id="${esc(ev.id)}">
-            <div class="event-media">${picture(ev, 'event-img', { lazy: false })}</div>
             <div class="event-body">
               <span class="eyebrow">Special event</span>
               <h2 class="event-title">${esc(ev.title)}</h2>
@@ -161,6 +160,7 @@ function eventCard(ev) {
                 <a class="btn btn-secondary" href="${esc(directionsUrl(ev))}" target="_blank" rel="noopener">Directions</a>
               </div>
             </div>
+            <div class="event-media">${picture(ev, 'event-img', { lazy: true })}</div>
           </article>
           `;
 }
@@ -237,6 +237,9 @@ function main() {
   }
   console.log(`now=${now.toISOString()} upcoming=${upcoming.length}/${all.length}` +
     (upcoming[0] ? ` next=${upcoming[0].id}` : ''));
+
+  // Loud reminder about unfinished placeholders (todo-devon / "coming soon").
+  require('./check-placeholders.js').run();
 }
 
 main();

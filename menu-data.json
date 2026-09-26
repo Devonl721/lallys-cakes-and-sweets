@@ -63,7 +63,8 @@
             {
               "name": "Peanut Butter Blast (PB Icing w/ Chocolate Drizzle, Topped w/ Reese's Cup)",
               "price": 3.0,
-              "priceLabel": "$3.00"
+              "priceLabel": "$3.00",
+              "badge": "Stand favorite"
             },
             {
               "name": "Chocolate Pretzel",
@@ -323,8 +324,8 @@
             },
             {
               "name": "Sample Box",
-              "price": 6.0,
-              "priceLabel": "$6.00"
+              "price": 10.0,
+              "priceLabel": "$10.00"
             }
           ],
           "priceLabel": "From $2.50"
@@ -721,46 +722,46 @@
             },
             {
               "name": "Cherry Coconut",
-              "price": 13.0,
-              "priceLabel": "$13.00"
+              "price": 15.0,
+              "priceLabel": "$15.00"
             },
             {
               "name": "Coconut",
-              "price": 13.0,
-              "priceLabel": "$13.00"
+              "price": 15.0,
+              "priceLabel": "$15.00"
             },
             {
               "name": "Peanut Butter",
-              "price": 13.0,
-              "priceLabel": "$13.00"
+              "price": 15.0,
+              "priceLabel": "$15.00"
             },
             {
               "name": "Raspberry",
-              "price": 13.0,
-              "priceLabel": "$13.00"
+              "price": 15.0,
+              "priceLabel": "$15.00"
             },
             {
               "name": "Banana",
-              "price": 13.0,
-              "priceLabel": "$13.00"
+              "price": 15.0,
+              "priceLabel": "$15.00"
             },
             {
               "name": "Buttercream",
-              "price": 13.0,
-              "priceLabel": "$13.00"
+              "price": 15.0,
+              "priceLabel": "$15.00"
             },
             {
               "name": "Orange",
-              "price": 13.0,
-              "priceLabel": "$13.00"
+              "price": 15.0,
+              "priceLabel": "$15.00"
             }
           ],
-          "priceLabel": "From $13.00"
+          "priceLabel": "$15.00"
         },
         {
           "name": "Irish Potatoes (Butter Cream Egg Rolled in Cinnamon)",
-          "price": 1.25,
-          "priceLabel": "$1.25"
+          "price": 1.5,
+          "priceLabel": "$1.50"
         },
         {
           "name": "Decade Candy",

@@ -32,13 +32,32 @@
 
   // Category heading thumbnails (images/menu). Only categories the photo truly shows.
   var THUMBS = {
-    "custom-orders": { file: "a-celebration-cake" },
-    "cupcakes-cakes": { file: "b-cupcakes" },
-    "pies-pastries": { file: "c-dumplings" }
+    "custom-orders": { file: "h-peanut-butter-cake" },
+    "cupcakes-cakes": { file: "e-hershey-cupcakes" },
+    "pies-pastries": { file: "g-key-lime-pie" },
+    "fried-pretzels": { file: "j-funnel-fries" }
   };
+
+  // Short labels for the sticky category buttons on phones (full name stays for screen readers)
+  var SHORT = {
+    "custom-orders": "Custom",
+    "cupcakes-cakes": "Cupcakes",
+    "cookies-brownies": "Cookies",
+    "pies-pastries": "Pies",
+    "candy": "Candy",
+    "fried-pretzels": "Fried treats",
+    "drinks": "Drinks",
+    "honey": "Honey"
+  };
+
+  // Phones: lists with this many rows or more show the first VISIBLE_ROWS plus a "Show all (N)" button
+  var COLLAPSE_AT = 6;
+  var VISIBLE_ROWS = 3;
 
   var sections = [];
   var cards = [];
+  var featured = null; // first row marked with a "badge" in menu-data.json
+  var listCount = 0;
 
   function render(data) {
     root.textContent = "";
@@ -86,15 +105,27 @@
         var text = [item.name, item.description, cat.name];
         if (item.variations && item.variations.length) {
           var ul = el("ul", "menu-options");
+          ul.id = "menu-list-" + (++listCount);
           item.variations.forEach(function (v) {
             var li = el("li");
-            li.appendChild(el("span", "menu-option-name", v.name));
+            var nm = el("span", "menu-option-name", v.name);
+            if (v.badge) {
+              nm.appendChild(document.createTextNode(" "));
+              nm.appendChild(el("span", "menu-badge", v.badge));
+              li.classList.add("has-badge");
+              if (!featured) {
+                li.id = "menu-favorite";
+                featured = { item: item, row: v, cat: cat };
+              }
+            }
+            li.appendChild(nm);
             li.appendChild(el("span", "menu-option-price", v.priceLabel || ""));
             li.setAttribute("data-search", norm(v.name));
             ul.appendChild(li);
             text.push(v.name);
           });
           card.appendChild(ul);
+          if (item.variations.length >= COLLAPSE_AT) addToggle(card, ul, item.variations.length);
         }
 
         if (item.custom) {
@@ -112,15 +143,67 @@
       root.appendChild(sec);
       sections.push(sec);
 
-      var link = el("a", "menu-jump-link", cat.name);
+      var link = el("a", "menu-jump-link");
+      if (SHORT[cat.id] && SHORT[cat.id] !== cat.name) {
+        link.appendChild(el("span", "menu-jump-full", cat.name));
+        var short = el("span", "menu-jump-short", SHORT[cat.id]);
+        short.setAttribute("aria-hidden", "true");
+        link.appendChild(short);
+      } else {
+        link.textContent = cat.name;
+      }
       link.href = "#cat-" + cat.id;
       link.setAttribute("data-target", sec.id);
       jump.appendChild(link);
     });
 
+    renderFeatured();
     applyFilter();
     observe();
     syncOffsets();
+  }
+
+  // Collapsible flavor list. The collapse only applies on phones (CSS media query) and only once JS adds the class.
+  function addToggle(card, ul, n) {
+    card.classList.add("is-collapsible", "is-collapsed");
+    var btn = el("button", "menu-more", "Show all (" + n + ")");
+    btn.type = "button";
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-controls", ul.id);
+    btn.addEventListener("click", function () {
+      var collapsed = card.classList.toggle("is-collapsed");
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      btn.textContent = collapsed ? "Show all (" + n + ")" : "Show fewer";
+      if (collapsed) {
+        var r = card.getBoundingClientRect();
+        var off = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--menu-scroll-offset"), 10) || 0;
+        if (r.top < off) window.scrollBy(0, r.top - off);
+      }
+    });
+    card.appendChild(btn);
+  }
+
+  // "Stand favorite" card near the top, built from the same menu-data.json row (single source of truth)
+  function renderFeatured() {
+    var box = document.getElementById("menu-featured");
+    if (!box) return;
+    box.textContent = "";
+    if (!featured) { box.hidden = true; return; }
+    var name = featured.row.name;
+    var m = /^(.*?)\s*\((.+)\)$/.exec(name);
+    box.appendChild(el("p", "menu-featured-label", featured.row.badge));
+    var head = el("div", "menu-featured-head");
+    head.appendChild(el("h2", "menu-featured-name", m ? m[1] : name));
+    head.appendChild(el("span", "menu-featured-price", featured.row.priceLabel || ""));
+    box.appendChild(head);
+    if (m) box.appendChild(el("p", "menu-featured-desc", m[2]));
+    var foot = el("p", "menu-featured-foot");
+    foot.appendChild(document.createTextNode(featured.item.name + " · "));
+    var a = el("a", null, "See it on the menu");
+    a.href = "#menu-favorite";
+    foot.appendChild(a);
+    box.appendChild(foot);
+    box.hidden = false;
   }
 
   function applyFilter() {
@@ -132,6 +215,7 @@
       var hay = card.getAttribute("data-search");
       var match = terms.every(function (t) { return hay.indexOf(t) !== -1; });
       card.hidden = !match;
+      card.classList.toggle("is-searching", terms.length > 0); // searching shows every row, even collapsed ones
       // When the item name/category itself matches, show all options; otherwise highlight matching options
       var headHit = terms.length && terms.every(function (t) { return card.getAttribute("data-head").indexOf(t) !== -1; });
       card.querySelectorAll(".menu-options li").forEach(function (li) {

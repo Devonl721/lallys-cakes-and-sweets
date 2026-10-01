@@ -2,64 +2,12 @@
   "customNote": "Custom cake prices depend on size and design. Send us an inquiry for a quote.",
   "categories": [
     {
-      "id": "custom-orders",
-      "name": "Custom Orders",
-      "items": [
-        {
-          "name": "Custom Order",
-          "custom": true,
-          "priceLabel": "Ask for a quote"
-        }
-      ]
-    },
-    {
-      "id": "cupcakes-cakes",
-      "name": "Cupcakes & Cakes",
+      "id": "stand",
+      "name": "Cupcakes, Scones, Cookies & Brownies",
       "items": [
         {
           "name": "Cupcakes",
           "variations": [
-            {
-              "name": "Dozen",
-              "price": 33.0,
-              "priceLabel": "$33.00"
-            },
-            {
-              "name": "Single",
-              "price": 3.0,
-              "priceLabel": "$3.00"
-            },
-            {
-              "name": "Mini",
-              "price": 1.5,
-              "priceLabel": "$1.50"
-            },
-            {
-              "name": "Chocolate",
-              "price": 3.0,
-              "priceLabel": "$3.00"
-            },
-            {
-              "name": "Vanilla",
-              "price": 3.0,
-              "priceLabel": "$3.00"
-            }
-          ],
-          "priceLabel": "From $1.50"
-        },
-        {
-          "name": "Chocolate Cupcakes",
-          "variations": [
-            {
-              "name": "Regular (Butter Cream Frosting)",
-              "price": 3.0,
-              "priceLabel": "$3.00"
-            },
-            {
-              "name": "Death by Chocolate (Chocolate Icing, Chocolate Drizzle)",
-              "price": 3.0,
-              "priceLabel": "$3.00"
-            },
             {
               "name": "Peanut Butter Blast (PB Icing w/ Chocolate Drizzle, Topped w/ Reese's Cup)",
               "price": 3.0,
@@ -67,16 +15,15 @@
               "badge": "Stand favorite"
             },
             {
+              "name": "Death by Chocolate (Chocolate Icing, Chocolate Drizzle)",
+              "price": 3.0,
+              "priceLabel": "$3.00"
+            },
+            {
               "name": "Chocolate Pretzel",
               "price": 3.0,
               "priceLabel": "$3.00"
-            }
-          ],
-          "priceLabel": "$3.00"
-        },
-        {
-          "name": "Specialty Cupcakes",
-          "variations": [
+            },
             {
               "name": "Red Velvet (Butter Cream Icing)",
               "price": 3.0,
@@ -101,10 +48,153 @@
               "name": "Tattoo Cupcake",
               "price": 3.0,
               "priceLabel": "$3.00"
+            },
+            {
+              "name": "Regular (Butter Cream Frosting)",
+              "price": 3.0,
+              "priceLabel": "$3.00"
+            },
+            {
+              "name": "Chocolate",
+              "price": 3.0,
+              "priceLabel": "$3.00"
+            },
+            {
+              "name": "Vanilla",
+              "price": 3.0,
+              "priceLabel": "$3.00"
+            },
+            {
+              "name": "Single",
+              "price": 3.0,
+              "priceLabel": "$3.00"
+            },
+            {
+              "name": "Mini",
+              "price": 1.5,
+              "priceLabel": "$1.50"
+            },
+            {
+              "name": "Dozen",
+              "price": 33.0,
+              "priceLabel": "$33.00"
             }
           ],
-          "priceLabel": "$3.00"
+          "priceLabel": "From $1.50"
         },
+        {
+          "name": "Scones",
+          "variations": [
+            {
+              "name": "Regular",
+              "price": 4.0,
+              "priceLabel": "$4.00"
+            },
+            {
+              "name": "Scone Mini",
+              "price": 2.0,
+              "priceLabel": "$2.00"
+            }
+          ],
+          "priceLabel": "From $2.00"
+        },
+        {
+          "name": "Cookies",
+          "variations": [
+            {
+              "name": "Chocolate Chip",
+              "price": 1.5,
+              "priceLabel": "$1.50"
+            },
+            {
+              "name": "Pumpkin Chocolate Chip",
+              "price": 1.5,
+              "priceLabel": "$1.50"
+            },
+            {
+              "name": "Peanut Butter",
+              "price": 1.5,
+              "priceLabel": "$1.50"
+            },
+            {
+              "name": "Pumpkin Cheesecake",
+              "price": 1.75,
+              "priceLabel": "$1.75"
+            },
+            {
+              "name": "Cookie Sandwich",
+              "price": 3.0,
+              "priceLabel": "$3.00"
+            },
+            {
+              "name": "Lucky Charm",
+              "price": 1.5,
+              "priceLabel": "$1.50"
+            },
+            {
+              "name": "Cherry Chocolate",
+              "price": 1.5,
+              "priceLabel": "$1.50"
+            },
+            {
+              "name": "Sugar",
+              "price": 1.5,
+              "priceLabel": "$1.50"
+            },
+            {
+              "name": "Small Chocolate Chip",
+              "price": 1.5,
+              "priceLabel": "$1.50"
+            },
+            {
+              "name": "Regular",
+              "price": 5.0,
+              "priceLabel": "$5.00"
+            },
+            {
+              "name": "Cinnamon Roll Cheesecake Stuffed Cookie",
+              "price": 6.5,
+              "priceLabel": "$6.50"
+            },
+            {
+              "name": "Filled Chocolate Chip",
+              "price": 3.0,
+              "priceLabel": "$3.00"
+            }
+          ],
+          "priceLabel": "From $1.50"
+        },
+        {
+          "name": "Brownie",
+          "variations": [
+            {
+              "name": "Plain",
+              "price": 2.5,
+              "priceLabel": "$2.50"
+            },
+            {
+              "name": "Icing",
+              "priceLabel": "Ask for a quote"
+            },
+            {
+              "name": "Triangle Brownie",
+              "price": 3.0,
+              "priceLabel": "$3.00"
+            },
+            {
+              "name": "Sample Box",
+              "price": 10.0,
+              "priceLabel": "$10.00"
+            }
+          ],
+          "priceLabel": "From $2.50"
+        }
+      ]
+    },
+    {
+      "id": "cakes",
+      "name": "Cakes & Cheesecake",
+      "items": [
         {
           "name": "Mini Cakes",
           "price": 6.0,
@@ -236,100 +326,9 @@
       ]
     },
     {
-      "id": "cookies-brownies",
-      "name": "Cookies, Brownies & Whoopie Pies",
+      "id": "whoopie-pies",
+      "name": "Whoopie Pies",
       "items": [
-        {
-          "name": "Cookies",
-          "variations": [
-            {
-              "name": "Chocolate Chip",
-              "price": 1.5,
-              "priceLabel": "$1.50"
-            },
-            {
-              "name": "Pumpkin Chocolate Chip",
-              "price": 1.5,
-              "priceLabel": "$1.50"
-            },
-            {
-              "name": "Peanut Butter",
-              "price": 1.5,
-              "priceLabel": "$1.50"
-            },
-            {
-              "name": "Pumpkin Cheesecake",
-              "price": 1.75,
-              "priceLabel": "$1.75"
-            },
-            {
-              "name": "Cookie Sandwich",
-              "price": 3.0,
-              "priceLabel": "$3.00"
-            },
-            {
-              "name": "Lucky Charm",
-              "price": 1.5,
-              "priceLabel": "$1.50"
-            },
-            {
-              "name": "Cherry Chocolate",
-              "price": 1.5,
-              "priceLabel": "$1.50"
-            },
-            {
-              "name": "Sugar",
-              "price": 1.5,
-              "priceLabel": "$1.50"
-            },
-            {
-              "name": "Small Chocolate Chip",
-              "price": 1.5,
-              "priceLabel": "$1.50"
-            },
-            {
-              "name": "Regular",
-              "price": 5.0,
-              "priceLabel": "$5.00"
-            },
-            {
-              "name": "Cinnamon Roll Cheesecake Stuffed Cookie",
-              "price": 6.5,
-              "priceLabel": "$6.50"
-            },
-            {
-              "name": "Filled Chocolate Chip",
-              "price": 3.0,
-              "priceLabel": "$3.00"
-            }
-          ],
-          "priceLabel": "From $1.50"
-        },
-        {
-          "name": "Brownie",
-          "variations": [
-            {
-              "name": "Plain",
-              "price": 2.5,
-              "priceLabel": "$2.50"
-            },
-            {
-              "name": "Icing",
-              "priceLabel": "Ask for a quote"
-            },
-            {
-              "name": "Triangle Brownie",
-              "price": 3.0,
-              "priceLabel": "$3.00"
-            },
-            {
-              "name": "Sample Box",
-              "price": 10.0,
-              "priceLabel": "$10.00"
-            }
-          ],
-          "priceLabel": "From $2.50"
-        },
         {
           "name": "Whoopie Pies",
           "variations": [
@@ -576,22 +575,6 @@
           "priceLabel": "$2.50"
         },
         {
-          "name": "Scones",
-          "variations": [
-            {
-              "name": "Regular",
-              "price": 4.0,
-              "priceLabel": "$4.00"
-            },
-            {
-              "name": "Scone Mini",
-              "price": 2.0,
-              "priceLabel": "$2.00"
-            }
-          ],
-          "priceLabel": "From $2.00"
-        },
-        {
           "name": "Shooters",
           "variations": [
             {
@@ -805,7 +788,7 @@
       "name": "Fried Treats & Pretzels",
       "items": [
         {
-          "name": "Fried Food",
+          "name": "Funnel cakes & fried treats",
           "variations": [
             {
               "name": "Fried Oreos/Candy",

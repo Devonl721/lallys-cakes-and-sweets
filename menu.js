@@ -32,17 +32,16 @@
 
   // Category heading thumbnails (images/menu). Only categories the photo truly shows.
   var THUMBS = {
-    "custom-orders": { file: "h-peanut-butter-cake" },
-    "cupcakes-cakes": { file: "e-hershey-cupcakes" },
+    "stand": { file: "e-hershey-cupcakes" },
     "pies-pastries": { file: "g-key-lime-pie" },
     "fried-pretzels": { file: "j-funnel-fries" }
   };
 
   // Short labels for the sticky category buttons on phones (full name stays for screen readers)
   var SHORT = {
-    "custom-orders": "Custom",
-    "cupcakes-cakes": "Cupcakes",
-    "cookies-brownies": "Cookies",
+    "stand": "Sweets",
+    "cakes": "Cakes",
+    "whoopie-pies": "Whoopie pies",
     "pies-pastries": "Pies",
     "candy": "Candy",
     "fried-pretzels": "Fried treats",

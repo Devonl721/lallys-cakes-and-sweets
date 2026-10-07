@@ -74,12 +74,58 @@
   }
 
   // Contact form → FormSubmit AJAX + Supabase inquiries
+  // The text-message alert is no longer sent from the page; it is forwarded
+  // from the bakery inbox (see the Brief 27 notes), so no phone address ships here.
   var form = document.getElementById("inquire-form");
+
+  // Spam checks: a hidden honeypot field and a minimum time on the page.
+  var MIN_FILL_MS = 3000;
+  var formReadyAt = Date.now();
+
+  // Custom-cake notice: event and pickup dates must be at least 14 days out,
+  // counted from today in the visitor's own time zone at page load.
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function isoLocal(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+  var minDate = new Date();
+  minDate.setHours(12, 0, 0, 0);
+  minDate.setDate(minDate.getDate() + 14);
+  var MIN_DATE_ISO = isoLocal(minDate);
+  var MIN_DATE_TEXT = minDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+
+  function checkDateField(input) {
+    if (!input) return true;
+    var err = document.getElementById(input.id + "-error");
+    var v = String(input.value || "");
+    var tooSoon = /^\d{4}-\d{2}-\d{2}$/.test(v) && v < MIN_DATE_ISO;
+    if (tooSoon) {
+      input.setAttribute("aria-invalid", "true");
+      if (err) {
+        err.textContent = "Please choose " + MIN_DATE_TEXT + " or later. Custom cakes need at least 2 weeks’ notice.";
+        err.hidden = false;
+      }
+    } else {
+      input.removeAttribute("aria-invalid");
+      if (err) {
+        err.textContent = "";
+        err.hidden = true;
+      }
+    }
+    return !tooSoon;
+  }
+
+  var dateInputs = form ? form.querySelectorAll('input[type="date"][data-min-days]') : [];
+  Array.prototype.forEach.call(dateInputs, function (input) {
+    input.min = MIN_DATE_ISO;
+    input.addEventListener("change", function () { checkDateField(input); });
+    input.addEventListener("blur", function () { checkDateField(input); });
+  });
+
   if (form) {
     form.addEventListener("submit", function (e) {
       e.preventDefault();
 
       var success = document.getElementById("form-success");
+      var honey = (form.querySelector("#hp-website") || {}).value || "";
       var submitBtn = form.querySelector('button[type="submit"]');
       var name = (form.querySelector("#name") || {}).value || "";
       var email = (form.querySelector("#email") || {}).value || "";
@@ -103,11 +149,48 @@
         if (v) extras.push({ label: f[1], value: v });
       });
 
+      // Honeypot filled in: almost certainly a bot. Pretend it worked and send nothing.
+      if (honey.trim()) {
+        form.reset();
+        if (success) {
+          success.classList.add("is-visible");
+          success.textContent = "Thanks! Your inquiry is on its way to Lally's Cakes & Sweets. We’ll be in touch soon.";
+        }
+        return;
+      }
+
       if (!name.trim() || !email.trim() || !message.trim()) {
         if (success) {
           success.classList.add("is-visible");
           success.textContent =
             "Please fill in your name, email, and message so we can reply.";
+        }
+        return;
+      }
+
+      // Too-soon event or pickup date: show the message under the field and stop.
+      var datesOk = true;
+      var firstBadDate = null;
+      Array.prototype.forEach.call(dateInputs, function (input) {
+        if (!checkDateField(input)) {
+          datesOk = false;
+          if (!firstBadDate) firstBadDate = input;
+        }
+      });
+      if (!datesOk) {
+        if (success) {
+          success.classList.add("is-visible");
+          success.textContent = "Please choose a date at least 2 weeks from today (" + MIN_DATE_TEXT + " or later).";
+        }
+        if (firstBadDate) firstBadDate.focus();
+        return;
+      }
+
+      // Submitted faster than a person can fill the form: ask them to try again.
+      if (Date.now() - formReadyAt < MIN_FILL_MS) {
+        if (success) {
+          success.classList.add("is-visible");
+          success.textContent = "Please take a moment to check your details, then press Send inquiry again.";
         }
         return;
       }
@@ -159,9 +242,8 @@
         _subject: "New inquiry — Lally's Cakes & Sweets",
         _template: "box",
         _captcha: "false",
-        _honey: "",
-        _replyto: trimmed.email,
-        _cc: "6108589208@tmomail.net"
+        _honey: honey,
+        _replyto: trimmed.email
       };
       extras.forEach(function (x) {
         payload[x.label] = x.value;
@@ -197,11 +279,15 @@
         .then(function (results) {
           var emailResult = results[0];
           var sbResult = results[1];
-          if (emailResult.ok) {
+          // FormSubmit can answer HTTP 200 with {"success":"false"} (e.g. a form that needs activation).
+          var emailOk = emailResult.ok && !(emailResult.data && String(emailResult.data.success) === "false");
+          var savedOk = !(sbResult && sbResult.supabaseFailed);
+          if (!emailOk) console.warn("Inquiry email was not accepted by FormSubmit:", emailResult.data);
+          if (emailOk || savedOk) {
             form.reset();
             if (success) {
               success.classList.add("is-visible");
-              if (sbResult && sbResult.supabaseFailed) {
+              if (!savedOk) {
                 success.textContent =
                   "Thanks! Your inquiry email was sent to Lally's Cakes & Sweets. We’ll be in touch soon.";
               } else {
@@ -213,7 +299,7 @@
             if (success) {
               success.classList.add("is-visible");
               success.textContent =
-                "Sorry — we couldn’t send that just now. Please try again, or use Call, Email, or Facebook above.";
+                "Sorry — we couldn’t send that just now. Please try again, or use Call, Email, or Facebook below the form.";
             }
           }
         })
@@ -221,7 +307,7 @@
           if (success) {
             success.classList.add("is-visible");
             success.textContent =
-              "Sorry — we couldn’t send that just now. Please try again, or use Call, Email, or Facebook above.";
+              "Sorry — we couldn’t send that just now. Please try again, or use Call, Email, or Facebook below the form.";
           }
         })
         .finally(function () {

@@ -230,7 +230,7 @@
               "priceLabel": "$10.00"
             },
             {
-              "name": "Tres Leche",
+              "name": "Tres Leches",
               "price": 10.0,
               "priceLabel": "$10.00"
             },
@@ -777,7 +777,7 @@
           "priceLabel": "$3.00"
         },
         {
-          "name": "Check Mix",
+          "name": "Chex Mix",
           "price": 4.0,
           "priceLabel": "$4.00"
         }
@@ -971,7 +971,7 @@
           "priceLabel": "$2.50"
         },
         {
-          "name": "Koolaid Jammer",
+          "name": "Kool-Aid Jammers",
           "price": 1.0,
           "priceLabel": "$1.00"
         }

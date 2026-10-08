@@ -56,7 +56,8 @@
       <div class="wrap">
         <span class="eyebrow">Say hello</span>
         <h1>Order / Inquire</h1>
-        <p>Custom cakes need at least 2 weeks’ notice and are picked up at our stand at Shillington Farmers Market.</p>
+        <p>Order treats for your party or event: cupcakes, cookies, brownies, pies, candy trays and custom cakes. Tell us what you’d like.</p>
+        <p class="page-hero-note">Custom cakes need at least 2 weeks’ notice and are picked up at our stand at Shillington Farmers Market.</p>
       </div>
     </div>
 
@@ -64,21 +65,21 @@
       <div class="wrap cake-grid">
         <div class="cake-gallery">
           <figure class="cake-photo cake-photo-main"><picture><source type="image/webp" srcset="images/cakes/peanut-butter-blast-cake-480.webp 480w, images/cakes/peanut-butter-blast-cake-960.webp 960w" sizes="(min-width: 801px) 330px, 60vw" /><img src="images/cakes/peanut-butter-blast-cake-480.jpg" srcset="images/cakes/peanut-butter-blast-cake-480.jpg 480w, images/cakes/peanut-butter-blast-cake-960.jpg 960w" sizes="(min-width: 801px) 330px, 60vw" width="480" height="640" decoding="async" alt="Round layer cake with ridged peanut butter frosting, piped rosettes and a chocolate drip, in an open bakery box" /></picture></figure>
-          <figure class="cake-photo"><picture><source srcset="images/a-celebration-cake.webp" type="image/webp" /><img src="images/a-celebration-cake.jpg" width="900" height="1200" decoding="async" alt="Round red cake decorated with gold braided trim, sitting in an open bakery box" /></picture></figure>
+          <figure class="cake-photo"><picture><source type="image/webp" srcset="images/menu/e-hershey-cupcakes-480.webp 480w, images/menu/e-hershey-cupcakes-960.webp 960w" sizes="(min-width: 801px) 210px, 40vw" /><img src="images/menu/e-hershey-cupcakes-480.jpg" srcset="images/menu/e-hershey-cupcakes-480.jpg 480w, images/menu/e-hershey-cupcakes-960.jpg 960w" sizes="(min-width: 801px) 210px, 40vw" width="480" height="360" decoding="async" alt="Chocolate cupcakes with chocolate frosting and Hershey’s pieces" /></picture></figure>
           <figure class="cake-photo"><picture><source type="image/webp" srcset="images/cakes/heart-cake-480.webp 480w, images/cakes/heart-cake-960.webp 960w" sizes="(min-width: 801px) 210px, 40vw" /><img src="images/cakes/heart-cake-480.jpg" srcset="images/cakes/heart-cake-480.jpg 480w, images/cakes/heart-cake-960.jpg 960w" sizes="(min-width: 801px) 210px, 40vw" width="480" height="360" decoding="async" alt="Small white frosted cake with ruffled piping and tiny red hearts, in an open bakery box" /></picture></figure>
         </div>
         <div class="cake-copy">
-          <span class="eyebrow">Custom cakes</span>
-          <h2 class="section-title" id="custom-cakes-title">Custom cakes, made for you</h2>
-          <p class="cake-lead">Birthdays, showers, holidays or “just because.” Tell us about your event and we’ll help design a cake, cupcakes or party tray that feels personal.</p>
+          <span class="eyebrow">Party orders</span>
+          <h2 class="section-title" id="custom-cakes-title">Order for your next party</h2>
+          <p class="cake-lead">Birthdays, showers, holidays or “just because.” Cupcakes, cookies, brownies, pies, candy, party trays or a custom cake: tell us about your event and we’ll help put together treats that feel personal.</p>
           <ol class="cake-steps">
             <li><span class="cake-step-n" aria-hidden="true">1</span><span><strong>Tell us your date and ideas</strong><span class="cake-step-t">Guest count, flavors, colors, a photo you love.</span></span></li>
             <li><span class="cake-step-n" aria-hidden="true">2</span><span><strong>We reply with options and a price</strong><span class="cake-step-t">By phone, email or Facebook Message.</span></span></li>
-            <li><span class="cake-step-n" aria-hidden="true">3</span><span><strong>Pick up your cake</strong><span class="cake-step-t">Pick up your cake at our stand at Shillington Farmers Market on the date we confirm together.</span></span></li>
+            <li><span class="cake-step-n" aria-hidden="true">3</span><span><strong>Pick up your order</strong><span class="cake-step-t">On the date we confirm together. Custom cakes are picked up at our stand at Shillington Farmers Market.</span></span></li>
           </ol>
           <p class="cake-notice">Please give us at least 2 weeks’ notice for custom cakes.</p>
           <div class="btn-row cake-actions">
-            <a class="btn btn-primary" href="#inquire-form">Start a cake inquiry</a>
+            <a class="btn btn-primary" href="#inquire-form">Start an order</a>
             <a class="btn btn-secondary" href="tel:+14842190445">Call (484) 219-0445</a>
           </div>
         </div>
@@ -118,19 +119,19 @@
               <p class="form-field-error" id="event-date-error" hidden></p>
             </div>
             <div class="form-group">
-              <label for="message">Message <span class="req" aria-hidden="true">*</span></label>
-              <textarea id="message" name="Message" required aria-required="true" placeholder="Tell us about the cake or sweets you’d like, guest count, flavors, and any must-haves…"></textarea>
+              <label for="message">What would you like? <span class="req" aria-hidden="true">*</span></label>
+              <textarea id="message" name="Message" required aria-required="true" placeholder="Cupcakes, cookies, brownies, pies, candy, a party tray or a custom cake? Tell us what you’d like, how many, flavors, and any must-haves…"></textarea>
             </div>
             <fieldset class="form-optional">
               <legend>Order details <span class="form-optional-tag">(optional)</span></legend>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="servings">Number of servings</label>
+                  <label for="servings">How many (pieces or servings)</label>
                   <input type="number" id="servings" name="Number of servings" min="1" step="1" inputmode="numeric" placeholder="e.g. 24" />
                 </div>
                 <div class="form-group">
                   <label for="flavors">Flavors</label>
-                  <input type="text" id="flavors" name="Flavors" placeholder="Cake, filling, frosting…" />
+                  <input type="text" id="flavors" name="Flavors" placeholder="e.g. chocolate, vanilla, peanut butter" />
                 </div>
               </div>
               <div class="form-group">

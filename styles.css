@@ -3200,3 +3200,13 @@ a.map-link:hover {
 .notfound .btn-row {
   justify-content: center;
 }
+
+/* Brief 28: keep the custom-cake notice as its own line under the contact intro */
+.page-hero .page-hero-note {
+  margin-top: 0.75rem;
+}
+
+/* Brief 28 addendum: keep the front Hershey cupcake in frame in the party-orders tile */
+.cake-photo img[src*="e-hershey-cupcakes"] {
+  object-position: 85% 55%;
+}

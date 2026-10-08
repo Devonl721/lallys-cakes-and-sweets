@@ -163,7 +163,7 @@
         if (success) {
           success.classList.add("is-visible");
           success.textContent =
-            "Please fill in your name, email, and message so we can reply.";
+            "Please fill in your name, email, and what you’d like so we can reply.";
         }
         return;
       }

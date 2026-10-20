@@ -17,6 +17,12 @@
  *   events.html: <!-- EVENTS:LIST:START --> ... <!-- EVENTS:LIST:END -->
  *                <!-- EVENTS:JSONLD:START --> ... <!-- EVENTS:JSONLD:END -->
  *
+ * Entries with "type": "notice" (e.g. holiday store hours) are shown in the
+ * banner and the list until their end time, using their "banner" text (and
+ * optional shorter "banner_title") and
+ * "hours" rows ({ day, hours }). They are not events, so they get no image,
+ * no Messenger button and no Event JSON-LD.
+ *
  * Run this locally before committing. GitHub Pages just serves the output.
  */
 'use strict';
@@ -123,6 +129,10 @@ function directionsUrl(ev) {
   return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(ev.address);
 }
 
+function isNotice(ev) {
+  return ev.type === 'notice';
+}
+
 // ---------- markup ----------
 // "Sun Oct 25"
 function shortDateLabel(ev) {
@@ -136,6 +146,13 @@ function shortDateLabel(ev) {
 // Emits nothing when there is no upcoming event.
 function homeBox(ev) {
   if (!ev) return '';
+  if (isNotice(ev)) {
+    return `
+    <a class="season-banner" href="events.html#${esc(ev.id)}">
+      <span class="season-banner-text"><strong>${esc(ev.banner_title || ev.title)}</strong> · ${esc(ev.banner)} · <span class="season-banner-cta">Details</span></span>
+    </a>
+    `;
+  }
   return `
     <a class="season-banner" href="events.html#${esc(ev.id)}">
       <span class="season-banner-text"><strong>${esc(ev.title)}</strong> · ${esc(shortDateLabel(ev))}, ${esc(timeLabel(ev))} · <span class="season-banner-cta">Details</span></span>
@@ -143,7 +160,29 @@ function homeBox(ev) {
     `;
 }
 
+// Store-hours style notice: title, one row per day, location, directions.
+function noticeCard(ev) {
+  const rows = ev.hours.map((r) =>
+    `\n                <div class="notice-hours-row"><dt>${esc(r.day)}</dt><dd>${esc(r.hours)}</dd></div>`).join('');
+  return `
+          <article class="event-card event-card-notice" id="${esc(ev.id)}">
+            <div class="event-body">
+              <h2 class="event-title">${esc(ev.title)}</h2>
+              <dl class="notice-hours">${rows}
+              </dl>
+              <ul class="event-meta">
+                <li><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg><span>${esc(ev.location_name)}<br />${esc(ev.address)}</span></li>
+              </ul>
+              <div class="event-actions">
+                <a class="btn btn-secondary" href="${esc(directionsUrl(ev))}" target="_blank" rel="noopener">Directions</a>
+              </div>
+            </div>
+          </article>
+          `;
+}
+
 function eventCard(ev) {
+  if (isNotice(ev)) return noticeCard(ev);
   const notes = ev.notes ? `\n              <p class="event-notes">${esc(ev.notes)}</p>` : '';
   return `
           <article class="event-card" id="${esc(ev.id)}">
@@ -175,7 +214,7 @@ function eventList(events) {
 }
 
 function jsonLd(events) {
-  return events.map((ev) => {
+  return events.filter((ev) => !isNotice(ev)).map((ev) => {
     const [street, locality, regionZip] = ev.address.split(',').map((s) => s.trim());
     const [region, postalCode] = (regionZip || '').split(/\s+/);
     const data = {

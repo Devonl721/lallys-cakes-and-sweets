@@ -12,6 +12,39 @@
       "image_alt": "Halloween illustration of kids in costumes trick-or-treating from decorated car trunks",
       "cta_label": "Message us on Messenger",
       "cta_url": "https://m.me/LallysCakesandSweets"
+    },
+    {
+      "id": "thanksgiving-hours-2026",
+      "type": "notice",
+      "title": "Thanksgiving Store Hours",
+      "banner_title": "Thanksgiving hours",
+      "start": "2026-11-24T10:00:00-05:00",
+      "end": "2026-11-29T00:00:00-05:00",
+      "location_name": "Our stand at Shillington Farmers Market",
+      "address": "10 S Summit Ave, Shillington, PA 19607",
+      "banner": "Nov 24⁠–⁠25, 10 AM⁠–⁠7 PM · Closed Nov 26⁠–⁠28",
+      "hours": [
+        {
+          "day": "Tue Nov 24",
+          "hours": "10 AM–7 PM"
+        },
+        {
+          "day": "Wed Nov 25",
+          "hours": "10 AM–7 PM"
+        },
+        {
+          "day": "Thu Nov 26 (Thanksgiving)",
+          "hours": "Closed"
+        },
+        {
+          "day": "Fri Nov 27",
+          "hours": "Closed"
+        },
+        {
+          "day": "Sat Nov 28",
+          "hours": "Closed"
+        }
+      ]
     }
   ]
 }
